@@ -1,0 +1,67 @@
+# Log files
+logs/
+*.log
+
+# Executable
+webserv
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Compiled commands file
+compile_commands.json
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# debug information files
+*.dwo
+
+.env*
+
+# venv
+venv
+
+# Local IDE files
+.idea/
+.vscode/
+*.sublime-workspace
+
+# Local os files
+.DS_Store
+
+# MacOs Trash
+*.dSYM

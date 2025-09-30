@@ -1,0 +1,33 @@
+/*
+// handles incremental socket writes: pull response bodies, push bytes, resume on next poll
+
+/// definition
+
+    ResponseSender(FdPoll fd);
+    send(HttpResponse*& response);   // returns true when buffer drained
+    std::string raw_response_;
+    FdPoll fd_;
+
+/// implementation
+
+bool ResponseSender::send(HttpResponse*& response) {
+    if (raw_response_.empty() && response != NULL) {
+        raw_response_ = response->toString();
+        delete response;                   // ResponseSender now owns payload
+        response = NULL;
+    }
+
+    if (raw_response_.empty())
+        return true;                       // nothing buffered, caller can queue next
+
+    chunk_size = min(raw_response_.size(), MAX_CHUNK);
+    sent_size = send(fd_, raw_response_, chunk_size);
+
+    if (sent_size > 0) {
+        raw_response_.erase(0, sent_size);
+        return; 
+    }
+    handleSendError();                     // tear down socket / notify owner
+    return;
+}
+*/

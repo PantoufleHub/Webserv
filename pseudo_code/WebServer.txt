@@ -1,0 +1,38 @@
+/*
+/// definition
+
+    list poll_entries
+    list clients
+    list listen_sockets
+    Config _config
+
+/// implementation
+
+    init(config):
+        _config = config
+        listen_sockets = build_listen_sockets(_config)
+        poll_entries = attach_listeners(listen_sockets)
+
+    accept_new_clients():
+        for socket in listen_sockets:
+            if socket is readable:
+                client = create_client(socket.accept())
+                poll_entries.append(client.fd)
+                clients.append(client)
+
+    update_clients():
+        for client in clients:
+            state = client.update()
+            if state == DONE or state == CLOSED:
+                poll_entries.remove(client.fd)
+                delete client
+                clients.erase(client)
+
+    run():
+        while 1:
+            ready = poll(poll_entries)
+            if not ready:
+                continue
+            accept_new_clients()
+            update_clients()
+*/
