@@ -107,6 +107,7 @@ void WebServer::_updateClientSockets() {
 			Logger::logResponse(bufstr, pfd.fd);
 			close(pfd.fd);
 			_pollfds.erase(_pollfds.begin() + index);
+			// CREATE CLIENT ERASE FUNCTION
 		}
 	}
 }
