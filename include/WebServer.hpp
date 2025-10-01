@@ -22,7 +22,8 @@ class WebServer {
    private:
 	vector<pollfd> _pollfds;
 	size_t _nb_listening_fds; // reservers the first n pollfds for listening sockets
-	// map<int, ClientHandler> _clients; client fd, handler
+	// map<int, ClientHandler> _clients; client fd, handler 
+	// coming soon :)
 	vector<VirtualServer> _virtual_servers;
 	
 	

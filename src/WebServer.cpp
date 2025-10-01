@@ -55,8 +55,6 @@ void WebServer::_openAllServerSockets() {
 	}
 }
 
-/// @param listening_socket Socket the client connected to
-/// @return The new client socket fd
 void WebServer::_openClientSocket(int listening_socket) {
 	sockaddr_in new_client_addr;
 	socklen_t new_client_addr_len = sizeof(new_client_addr);
