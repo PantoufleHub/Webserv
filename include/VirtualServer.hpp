@@ -4,16 +4,7 @@
 
 #include "ABlockDirective.hpp"
 #include "Location.hpp"
-
-struct EntryPoint {
-	std::string ip;
-	int port;
-	int backlog;
-
-	bool operator==(const EntryPoint& other) const;
-};
-
-bool EntryPointInList(const EntryPoint& ep, const std::vector<EntryPoint>& list);
+#include "EntryPoint.hpp"
 
 class VirtualServer : public ABlockDirective {
    private:

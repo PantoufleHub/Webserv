@@ -5,16 +5,59 @@ WebServer::WebServer(const string& config_file) {
 	parsedFile.tokeniseConfigFile();
 
 	_virtual_servers = parsedFile.parseTokens(parsedFile.getTokens());
+	_nb_listening_fds = 0;
 }
 
 WebServer::~WebServer() {
 	
 }
 
+void WebServer::_openListeningSocket(string ip, int port, int backlog) {
+	int server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+	ASSERT(server_socket_fd != -1);
+
+	sockaddr_in server_addr = WebUtils::createSockaddr(ip, port);
+
+	int opt = 1;
+	ASSERT(setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != -1);
+
+	ASSERT(::bind(server_socket_fd, (sockaddr*)&server_addr, (socklen_t)sizeof(sockaddr_in)) != -1);
+
+	ASSERT(listen(server_socket_fd, backlog) != -1);
+	cout << "Server listening on port: " << port << " Socket " << server_socket_fd << endl;
+
+	fcntl(server_socket_fd, fcntl(server_socket_fd, F_GETFL, 0) | O_NONBLOCK);
+
+	pollfd server_pollfd;
+	server_pollfd.events = POLLIN;
+	server_pollfd.fd = server_socket_fd;
+
+	_nb_listening_fds++;
+	_pollfds.push_back(server_pollfd);
+}
+
+/// @brief Opens a listening socket for each VirtualServer ip:port entry point combination
+void WebServer::_openAllServerSockets() {
+	vector<EntryPoint> opened_entries;
+
+	for (size_t server_i = 0; server_i < _virtual_servers.size(); server_i++) {
+		VirtualServer server = _virtual_servers[server_i];
+		vector<EntryPoint> server_entries = server.getEntryPoints();
+		for (size_t entry_i = 0; entry_i < server_entries.size(); entry_i++) {
+			EntryPoint ep = server_entries[entry_i];
+			if (!EpInEps(ep, opened_entries)) {
+				opened_entries.push_back(ep);
+				cout << "Opening socket on entry point: " << ep.ip << ":" << ep.port << endl;
+				_openListeningSocket(ep.ip, ep.port, ep.backlog);
+			}
+		}
+	}
+}
 
 /// @param listening_socket Socket the client connected to
 /// @return The new client socket fd
-int WebServer::_openClientSocket(int listening_socket) {
+void WebServer::_openClientSocket(int listening_socket) {
 	sockaddr_in new_client_addr;
 	socklen_t new_client_addr_len = sizeof(new_client_addr);
 	int new_client_socket_fd;
@@ -29,61 +72,67 @@ int WebServer::_openClientSocket(int listening_socket) {
 
 	struct pollfd new_client_pollfd;
 	new_client_pollfd.fd = new_client_socket_fd;
-	// Change the events !
-	new_client_pollfd.events |= POLLOUT;
-	_fds.push_back(new_client_pollfd);
+	// Change the events !?
+	new_client_pollfd.events = POLLIN;
+	_pollfds.push_back(new_client_pollfd);
 
 	Logger::logConnection(new_client_addr, new_client_pollfd.fd);
 	cout << "New client on socket: " << new_client_pollfd.fd << endl;
+}
 
-	return new_client_pollfd.fd;
+void WebServer::_updateClientSockets() {
+	// Iterate after the listening sockets TEMP!
+	for (size_t index = _nb_listening_fds; index < _pollfds.size(); index++) {
+		pollfd& pfd = _pollfds[index];
+		if (WebUtils::canRead(pfd)) {
+			char buffer[1024];
+			int bytes_received = recv(pfd.fd, buffer, sizeof(buffer) - 1, 0);
+			if (bytes_received <= 0) {
+				// Connection closed or error
+				cout << "Client disconnected: " << pfd.fd << endl;
+				Logger::logDisconnection(pfd.fd);
+				close(pfd.fd);
+				_pollfds.erase(_pollfds.begin() + index);
+				index--;
+			} else {
+				buffer[bytes_received] = '\0'; // Null-terminate the received data
+				string request(buffer);
+				cout << "Received from client " << pfd.fd << ": " << request << endl;
+				Logger::logRequest(request, pfd.fd);
+				pfd.events = POLLOUT;
+			}
+		}
+		if (WebUtils::canWrite(pfd)) {
+			char buf[] = "HTTP/1.1 200 KK\r\nConnection: close\r\n\r\ncon";
+			string bufstr(buf);
+			send(pfd.fd, buf, bufstr.size(), 0);
+			Logger::logResponse(bufstr, pfd.fd);
+			close(pfd.fd);
+			_pollfds.erase(_pollfds.begin() + index);
+		}
+	}
+}
+
+void WebServer::_updateListeningSockets() {
+	for (size_t index = 0; index < _nb_listening_fds; index++) {
+		pollfd& poll_fd = _pollfds[index];
+		if (WebUtils::canRead(poll_fd)) {
+			_openClientSocket(poll_fd.fd);
+		}
+	}
 }
 
 void WebServer::run() {
-	string ip = "0.0.0.0";
-	int port = 8080;
-	int backlog = 10;
+	_openAllServerSockets();
 	int poll_timeout = 1000;
 
-	int server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-
-	ASSERT(server_socket_fd != -1);
-
-	sockaddr_in server_addr = SocketUtils::createSockaddr(ip, port);
-
-	int opt = 1;
-	ASSERT(setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != -1);
-
-	ASSERT(::bind(server_socket_fd, (sockaddr*)&server_addr, (socklen_t)sizeof(sockaddr_in)) != -1);
-
-	ASSERT(listen(server_socket_fd, backlog) != -1);
-	cout << "Server listening on port: " << port << endl;
-
-	fcntl(server_socket_fd, fcntl(server_socket_fd, F_GETFL, 0) | O_NONBLOCK);
-
-	pollfd server_pollfd;
-	server_pollfd.events = POLLIN;
-	server_pollfd.fd = server_socket_fd;
-
-	_fds.push_back(server_pollfd);
-
 	while (1) {
-		cout << poll (&_fds[0], _fds.size(), poll_timeout) << " pollfds updated" << endl;
+		cout << poll (&_pollfds[0], _pollfds.size(), poll_timeout) << " pollfds updated" << endl;
 
-		for (size_t fd_index = 0; fd_index < _fds.size(); fd_index++) {
-			if (_fds[fd_index].revents & POLLIN) {
-				if (fd_index == 0)
-					_openClientSocket(_fds[fd_index].fd);
-			}
-			if (_fds[fd_index].revents & POLLOUT) {
-				char buf[] = "HTTP/1.1 200 KK\r\nConnection: close\r\n\r\ncon";
-				string bufstr(buf);
-				send(_fds[fd_index].fd, buf, bufstr.size(), 0);
-				close(_fds[fd_index].fd);
-				_fds.erase(_fds.begin() + fd_index);
-				fd_index--;
-			}
-		}
+		_updateListeningSockets();
+		_updateClientSockets();
+
+		// GARBAGE? clear clients
 	}
 }
 
