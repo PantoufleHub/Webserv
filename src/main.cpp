@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "ConfigParser.hpp"
+#include "WebServer.hpp"
 
 int main(int argc, char** argv) {
 	if (argc > 2) {
@@ -17,10 +18,8 @@ int main(int argc, char** argv) {
 	}
 
 	try {
-		ConfigParser parser(configPath);
-		parser.tokeniseConfigFile();
-		const std::vector<VirtualServer> servers = parser.parseTokens(parser.getTokens());
-		std::cout << "Parsed " << servers.size() << " server block(s) successfully." << std::endl;
+		WebServer Server(configPath);
+		Server.display();
 	} catch (const std::exception& e) {
 		std::cerr << e.what() << std::endl;
 		return 1;
