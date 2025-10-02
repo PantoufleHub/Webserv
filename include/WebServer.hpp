@@ -35,10 +35,14 @@ class WebServer {
 	void _updateListeningSockets();
 	void _openClientSocket(int listening_socket);
 	void _updateClientSockets();
+	void _garbageCollectClients();
 
    public:
 	WebServer(const string& config_file);
 	~WebServer();
+
+	pollfd& getPollFd(int fd);
+	void removePollFd(int fd);
 
 	void run();
 	void display() const;

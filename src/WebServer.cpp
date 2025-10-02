@@ -11,6 +11,25 @@ WebServer::~WebServer() {
 	
 }
 
+pollfd& WebServer::getPollFd(int fd) {
+	for (size_t i = 0; i < _pollfds.size(); i++) {
+		if (_pollfds[i].fd == fd) {
+			return _pollfds[i];
+		}
+	}
+	throw runtime_error("Pollfd not found");
+}
+
+void WebServer::removePollFd(int fd) {
+	for (size_t i = 0; i < _pollfds.size(); i++) {
+		if (_pollfds[i].fd == fd) {
+			_pollfds.erase(_pollfds.begin() + i);
+			return;
+		}
+	}
+	throw runtime_error("Pollfd to remove not found");
+}
+
 void WebServer::_openListeningSocket(string ip, int port) {
 	int server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -84,6 +103,9 @@ void WebServer::_openClientSocket(int listening_socket) {
 	cout << "client connected: " << inet_ntoa(new_client_addr.sin_addr) << ":" << ntohs(new_client_addr.sin_port)
 	     << endl;
 
+	cout << "Client from entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd), true) << endl;
+	cout << "Server entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd)) << endl;
+
 	fcntl(new_client_socket_fd, fcntl(new_client_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 
 	struct pollfd new_client_pollfd;
@@ -98,36 +120,34 @@ void WebServer::_openClientSocket(int listening_socket) {
 }
 
 void WebServer::_updateClientSockets() {
-	// Iterate after the listening sockets TEMP!
-	for (size_t index = _listening_sockets.size(); index < _pollfds.size(); index++) {
-		pollfd& pfd = _pollfds[index];
-		if (WebUtils::canRead(pfd)) {
-			char buffer[1024];
-			int bytes_received = recv(pfd.fd, buffer, sizeof(buffer) - 1, 0);
-			if (bytes_received <= 0) {
-				// Connection closed or error
-				cout << "Client disconnected: " << pfd.fd << endl;
-				Logger::logDisconnection(pfd.fd);
-				close(pfd.fd);
-				_pollfds.erase(_pollfds.begin() + index);
-				index--;
-			} else {
-				buffer[bytes_received] = '\0'; // Null-terminate the received data
-				string request(buffer);
-				Logger::logRequest(request, pfd.fd);
-				pfd.events = POLLOUT;
-			}
+	map<int, ClientHandler>::iterator client_it;
+	for (client_it = _clients.begin(); client_it != _clients.end(); ++client_it) {
+		client_it->second.update();
+	}
+}
+
+void WebServer::_garbageCollectClients() {
+	map<int, ClientHandler>::iterator client_it = _clients.begin(); 
+	while (client_it != _clients.end()) {
+		ClientHandler& client = client_it->second;
+
+		if (client.getState() == DONE) {
+			int client_fd = client_it->first;
+			cout << "Cleaning up client on socket: " << client_fd << endl;
+			close(client_fd);
+			removePollFd(client_fd);
+			_clients.erase(client_it);
+			Logger::logDisconnection(client_fd);
+			client_it = _clients.begin(); // Restart iterator since we modified the map
 		}
-		if (WebUtils::canWrite(pfd)) {
-			char buf[] = "HTTP/1.1 200 KK\r\nConnection: close\r\n\r\ncon";
-			string bufstr(buf);
-			send(pfd.fd, buf, bufstr.size(), 0);
-			Logger::logResponse(bufstr, pfd.fd);
-			close(pfd.fd);
-			_pollfds.erase(_pollfds.begin() + index);
-			// CREATE CLIENT ERASE FUNCTION
+		else {
+			client_it++;
 		}
 	}
+
+	cout	<< "-Garbage collection done:\n"
+			<< " " << _clients.size() << " clients remaining" << "\n"
+			<< " " << _pollfds.size() << " pollfds remaining\n" << endl;
 }
 
 void WebServer::run() {
@@ -135,12 +155,12 @@ void WebServer::run() {
 	int poll_timeout = 1000;
 
 	while (1) {
-		cout << poll (&_pollfds[0], _pollfds.size(), poll_timeout) << " pollfds updated" << endl;
+		cout << "-- POLL: " << poll (&_pollfds[0], _pollfds.size(), poll_timeout) << " pollfds updated --" << endl;
 
 		_updateListeningSockets();
 		_updateClientSockets();
 
-		// GARBAGE? clear clients
+		_garbageCollectClients();
 	}
 }
 

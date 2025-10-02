@@ -11,15 +11,25 @@ using namespace std;
 
 class WebServer;
 
+enum ClientState {
+	PROCESSING,
+	RESPONDING,
+	DONE,
+};
+
 class ClientHandler {
    private:
-	Socket _socket;
+	size_t _buffer_size;
+	Socket _socket; // DOESNT UPDATE IN MAIN!!!
 	WebServer* _server;
+	ClientState _state;
    public:
    	// For map
    	ClientHandler();
 	ClientHandler(Socket socket, WebServer* server);
 	~ClientHandler();
+
+	ClientState getState() const;
 
 	void update();
 };

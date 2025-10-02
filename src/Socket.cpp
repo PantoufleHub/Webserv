@@ -8,11 +8,11 @@ Socket::Socket(int fd) : _fd(fd) {
 	getpeername(_fd, (sockaddr*)&_peer_socket_address, &addrlen);
 
 	// Announcing socket creation!
-	cout << "\n --- New socket " << _fd << " ---\n"
-	     << "  Linking " << inet_ntoa(_socket_address.sin_addr) << ":" << ntohs(_socket_address.sin_port)
-	     << "\n  to      " << inet_ntoa(_peer_socket_address.sin_addr) << ":" << ntohs(_peer_socket_address.sin_port)
-	     << endl
-	     << endl;
+	// cout << "\n --- New socket " << _fd << " ---\n"
+	//      << "  Linking " << inet_ntoa(_socket_address.sin_addr) << ":" << ntohs(_socket_address.sin_port)
+	//      << "\n  to      " << inet_ntoa(_peer_socket_address.sin_addr) << ":" << ntohs(_peer_socket_address.sin_port)
+	//      << endl
+	//      << endl;
 }
 
 string Socket::getIpString() const {
