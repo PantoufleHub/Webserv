@@ -28,6 +28,11 @@ class WebServer {
 	vector<VirtualServer> _virtual_servers;
 	vector<pollfd> _pollfds;
 	vector<Socket> _listening_sockets;
+
+	// NEED TO FIND A WAY TO SYNC CLIENTS AND POLLFDS
+	// REVAMP SOCKET TO HOLD POLLFDS?
+	// SEND POLLFD IN UPDATE? OR SEND SOCKET?
+	// CANT HOLD POLLFD IN CLIENTHANDLER, NEEDS TO BE IN WEBSERVER
 	map<int, ClientHandler> _clients; // _pollfds.fd, ClientHandler
 	
 	void _openListeningSocket(string ip, int port);
