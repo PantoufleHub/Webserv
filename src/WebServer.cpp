@@ -5,7 +5,6 @@ WebServer::WebServer(const string& config_file) {
 	parsedFile.tokeniseConfigFile();
 
 	_virtual_servers = parsedFile.parseTokens(parsedFile.getTokens());
-	_nb_listening_fds = 0;
 }
 
 WebServer::~WebServer() {
@@ -33,7 +32,7 @@ void WebServer::_openListeningSocket(string ip, int port, int backlog) {
 	server_pollfd.events = POLLIN;
 	server_pollfd.fd = server_socket_fd;
 
-	_nb_listening_fds++;
+	_listening_sockets.push_back(Socket(server_socket_fd));
 	_pollfds.push_back(server_pollfd);
 }
 
@@ -56,10 +55,20 @@ void WebServer::_openAllServerSockets() {
 }
 
 void WebServer::_updateListeningSockets() {
-	for (size_t index = 0; index < _nb_listening_fds; index++) {
-		pollfd& poll_fd = _pollfds[index];
-		if (WebUtils::canRead(poll_fd)) {
-			_openClientSocket(poll_fd.fd);
+	for (size_t index = 0; index < _listening_sockets.size(); index++) {
+		int listening_fd = _listening_sockets[index].getFd();
+
+		// Look for the corresponding pollfd
+		for (size_t i = 0; i < _pollfds.size(); i++) {
+			if (_pollfds[i].fd == listening_fd) {
+				pollfd& poll_fd = _pollfds[i];
+
+				// If the listening socket is ready to read, accept a new connection
+				if (WebUtils::canRead(poll_fd)) {
+					_openClientSocket(poll_fd.fd);
+				}
+				break;
+			}
 		}
 	}
 }
@@ -89,7 +98,7 @@ void WebServer::_openClientSocket(int listening_socket) {
 
 void WebServer::_updateClientSockets() {
 	// Iterate after the listening sockets TEMP!
-	for (size_t index = _nb_listening_fds; index < _pollfds.size(); index++) {
+	for (size_t index = _listening_sockets.size(); index < _pollfds.size(); index++) {
 		pollfd& pfd = _pollfds[index];
 		if (WebUtils::canRead(pfd)) {
 			char buffer[1024];
