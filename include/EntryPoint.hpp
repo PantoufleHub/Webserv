@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -9,7 +10,8 @@ using namespace std;
 struct EntryPoint {
 	string ip;
 	int port;
-	int backlog;  // number of possible simultaneous pending connections
 	bool operator==(const EntryPoint& other) const;
 };
+
 bool EpInEps(const EntryPoint& ep, const vector<EntryPoint>& eps);
+ostream& operator<<(ostream& os, const EntryPoint& ep);

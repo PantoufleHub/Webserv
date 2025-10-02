@@ -15,3 +15,8 @@ bool EpInEps(const EntryPoint& ep, const vector<EntryPoint>& eps) {
 	}
 	return false;
 }
+
+ostream& operator<<(ostream& os, const EntryPoint& ep) {
+	os << ep.ip << ":" << ep.port;
+	return os;
+}
