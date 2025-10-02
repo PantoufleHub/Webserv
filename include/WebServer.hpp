@@ -27,12 +27,11 @@ class WebServer {
 	vector<VirtualServer> _virtual_servers;
 	
 	
-	void _openAllServerSockets();
 	void _openListeningSocket(string ip, int port, int backlog);
-	void _addListeningSocketFd(pollfd& pollfd);
+	void _openAllServerSockets();
+	void _updateListeningSockets();
 	void _openClientSocket(int listening_socket);
 	void _updateClientSockets();
-	void _updateListeningSockets();
 
    public:
 	WebServer(const string& config_file);

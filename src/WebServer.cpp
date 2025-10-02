@@ -55,6 +55,15 @@ void WebServer::_openAllServerSockets() {
 	}
 }
 
+void WebServer::_updateListeningSockets() {
+	for (size_t index = 0; index < _nb_listening_fds; index++) {
+		pollfd& poll_fd = _pollfds[index];
+		if (WebUtils::canRead(poll_fd)) {
+			_openClientSocket(poll_fd.fd);
+		}
+	}
+}
+
 void WebServer::_openClientSocket(int listening_socket) {
 	sockaddr_in new_client_addr;
 	socklen_t new_client_addr_len = sizeof(new_client_addr);
@@ -108,15 +117,6 @@ void WebServer::_updateClientSockets() {
 			close(pfd.fd);
 			_pollfds.erase(_pollfds.begin() + index);
 			// CREATE CLIENT ERASE FUNCTION
-		}
-	}
-}
-
-void WebServer::_updateListeningSockets() {
-	for (size_t index = 0; index < _nb_listening_fds; index++) {
-		pollfd& poll_fd = _pollfds[index];
-		if (WebUtils::canRead(poll_fd)) {
-			_openClientSocket(poll_fd.fd);
 		}
 	}
 }
