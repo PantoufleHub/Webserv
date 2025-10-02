@@ -157,11 +157,6 @@ void WebServer::run() {
 	while (1) {
 		cout << "-- POLL: " << poll (&_pollfds[0], _pollfds.size(), poll_timeout) << " pollfds updated --" << endl;
 
-
-		// HEY MAN I thINK YOU NEED TO CHANGE CLIENTHANDLER TO TAKE POLLFD IN UPDATE
-		// OR SEND SOCKET AND GET POLLFD FROM WEBSERVER
-		// OR HOLD POLLFD IN CLIENTHANDLER AND UPDATE IT FROM WEBSERVER
-
 		_updateListeningSockets();
 		_updateClientSockets();
 
