@@ -17,3 +17,20 @@ bool WebUtils::canRead(pollfd& pfd) {
 bool WebUtils::canWrite(pollfd& pfd) {
 	return pfd.revents & POLLOUT;
 }
+
+EntryPoint WebUtils::getSocketEntryPoint(Socket socket, bool peer) {
+	int fd = socket.getFd();
+	sockaddr_in addr;
+	socklen_t addr_len = sizeof(addr);
+
+	if (peer)
+		getpeername(fd, (sockaddr*)&addr, &addr_len);
+	else
+		getsockname(fd, (sockaddr*)&addr, &addr_len);
+
+	EntryPoint ep;
+	ep.ip = string(inet_ntoa(addr.sin_addr));
+	ep.port = ntohs(addr.sin_port);
+
+	return ep;
+}
