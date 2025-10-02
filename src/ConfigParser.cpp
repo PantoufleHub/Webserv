@@ -16,7 +16,6 @@ void fillEntryPoint(std::vector<std::string>::iterator& it, EntryPoint& entryPoi
 		const std::size_t colonPos = it->find(':');
 		entryPoint.ip = it->substr(0, colonPos);
 		entryPoint.port = std::atoi(it->substr(colonPos + 1).c_str());
-		entryPoint.backlog = 10;
 		block.addEntryPoint(entryPoint);
 	}
 }

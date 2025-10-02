@@ -11,7 +11,7 @@ WebServer::~WebServer() {
 	
 }
 
-void WebServer::_openListeningSocket(string ip, int port, int backlog) {
+void WebServer::_openListeningSocket(string ip, int port) {
 	int server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
 
 	ASSERT(server_socket_fd != -1);
@@ -23,7 +23,7 @@ void WebServer::_openListeningSocket(string ip, int port, int backlog) {
 
 	ASSERT(::bind(server_socket_fd, (sockaddr*)&server_addr, (socklen_t)sizeof(sockaddr_in)) != -1);
 
-	ASSERT(listen(server_socket_fd, backlog) != -1);
+	ASSERT(listen(server_socket_fd, DEFAULT_SOCKET_BACKLOG) != -1);
 	cout << "Server listening on port: " << port << " Socket " << server_socket_fd << endl;
 
 	fcntl(server_socket_fd, fcntl(server_socket_fd, F_GETFL, 0) | O_NONBLOCK);
@@ -48,7 +48,7 @@ void WebServer::_openAllServerSockets() {
 			if (!EpInEps(ep, opened_entries)) {
 				opened_entries.push_back(ep);
 				cout << "Opening socket on entry point: " << ep.ip << ":" << ep.port << endl;
-				_openListeningSocket(ep.ip, ep.port, ep.backlog);
+				_openListeningSocket(ep.ip, ep.port);
 			}
 		}
 	}
@@ -90,6 +90,7 @@ void WebServer::_openClientSocket(int listening_socket) {
 	new_client_pollfd.fd = new_client_socket_fd;
 	// Change the events !?
 	new_client_pollfd.events = POLLIN;
+	_clients[new_client_socket_fd] = ClientHandler(Socket(new_client_socket_fd), this);
 	_pollfds.push_back(new_client_pollfd);
 
 	Logger::logConnection(new_client_addr, new_client_pollfd.fd);
@@ -113,7 +114,6 @@ void WebServer::_updateClientSockets() {
 			} else {
 				buffer[bytes_received] = '\0'; // Null-terminate the received data
 				string request(buffer);
-				cout << "Received from client " << pfd.fd << ": " << request << endl;
 				Logger::logRequest(request, pfd.fd);
 				pfd.events = POLLOUT;
 			}

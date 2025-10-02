@@ -16,19 +16,21 @@
 #include "Logger.hpp"
 #include "EntryPoint.hpp"
 #include "Socket.hpp"
+#include "ClientHandler.hpp"
+#include "Constants.hpp"
+
+class ClientHandler;
 
 using namespace std;
 
 class WebServer {
    private:
-	vector<pollfd> _pollfds;
-	vector<Socket> _listening_sockets; // reservers the first n pollfds for listening sockets
-	// map<int, ClientHandler> _clients; client fd, handler 
-	// coming soon :)
 	vector<VirtualServer> _virtual_servers;
+	vector<pollfd> _pollfds;
+	vector<Socket> _listening_sockets;
+	map<int, ClientHandler> _clients; // _pollfds.fd, ClientHandler
 	
-	
-	void _openListeningSocket(string ip, int port, int backlog);
+	void _openListeningSocket(string ip, int port);
 	void _openAllServerSockets();
 	void _updateListeningSockets();
 	void _openClientSocket(int listening_socket);
