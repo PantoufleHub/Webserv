@@ -35,6 +35,8 @@ class ClientHandler {
 	ClientHandler(Socket socket, WebServer* server);
 	~ClientHandler();
 
+	void changeState(ClientState newState);
+
 	ClientState getState() const;
 
 	void update();
