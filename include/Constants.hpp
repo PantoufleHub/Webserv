@@ -3,8 +3,6 @@
 #include <map>
 #include <string>
 
-#define DEFAULT_SOCKET_BACKLOG 1024
-
 // HTTP constants reused by the config parser and future server modules.
 static const std::string HTTP_VERSION = "HTTP/1.1";
 
