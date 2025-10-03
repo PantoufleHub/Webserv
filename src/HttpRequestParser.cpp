@@ -91,25 +91,25 @@ bool HttpRequestParser::_validateRequest(HttpRequest& ret) {
 	return true;
 }
 
-HttpRequest HttpRequestParser::strToHttpRequest(string str) {
-	HttpRequest ret;
+HttpRequest* HttpRequestParser::strToHttpRequest(string str) {
+	HttpRequest* ret = new HttpRequest();
 	istringstream iss(str);
 
-	ret.flagAsInvalid();
+	(*ret).flagAsInvalid();
 
-	if (!_parseFirstLine(ret, iss))
+	if (!_parseFirstLine(*ret, iss))
 		return ret;
 
-	if (!_parseHeaders(ret, iss))
+	if (!_parseHeaders(*ret, iss))
 		return ret;
 
-	if (!_parseBody(ret, iss))
+	if (!_parseBody(*ret, iss))
 		return ret;
 
-	if (!_validateRequest(ret))
+	if (!_validateRequest(*ret))
 		return ret;
 
-	ret.flagAsValid();
+	(*ret).flagAsValid();
 	return ret;
 }
 

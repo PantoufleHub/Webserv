@@ -3,9 +3,7 @@
 // AHttpMessage::AHttpMessage() {}
 
 void AHttpMessage::addHeader(string header, string value) {
-	cout << "Adding header: " << header << " with value: " << value << endl;
 	this->_headers[header] = value;
-	cout << "Header added" << endl;
 }
 
 void AHttpMessage::setBody(string body) {

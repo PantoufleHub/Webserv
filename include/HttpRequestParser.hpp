@@ -18,6 +18,6 @@ class HttpRequestParser {
 	static bool _validateRequest(HttpRequest& request);
 
    public:
-	static HttpRequest strToHttpRequest(string str);
+	static HttpRequest* strToHttpRequest(string str);
 	static int checkDataIn(const string& _data_in);
 };
