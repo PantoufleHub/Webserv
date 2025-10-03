@@ -13,7 +13,10 @@ ClientHandler::ClientHandler(Socket socket, WebServer* server) : _socket(socket)
 	_request = NULL;
 }
 
-ClientHandler::~ClientHandler() {}
+ClientHandler::~ClientHandler() {
+	if (_request)
+		delete _request;
+}
 
 void ClientHandler::_checkRequestBuffer() {
 	int request_length = HttpRequestParser::checkDataIn(_request_buffer);
