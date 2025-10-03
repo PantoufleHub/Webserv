@@ -28,7 +28,7 @@ enum ClientState {
 class ClientHandler {
    private:
 	size_t _buffer_size;
-	Socket _socket; // You can find the useful fd in here
+	Socket _socket;
 	WebServer* _server;
 	ClientState _state;
 	string _request_buffer;
