@@ -40,6 +40,14 @@ const int HTTP_CODE_SERVICE_UNAVAILABLE = 503;
 const int HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED = 505;
 const int HTTP_CODE_INTERNAL_SERVER_ERROR = 500;
 
+const size_t REQUEST_EOF = 4; // \r\n\r\n length
+
+// Server limits
+const size_t CONTENT_LENGTH_SIZE = 16;
+const size_t MAX_REQUEST_HEADERS = 8192;
+const size_t MAX_REQUEST_BODY = 1048576;
+const size_t MAX_REQUEST_SIZE = MAX_REQUEST_HEADERS + MAX_REQUEST_BODY;
+
 // Config file constants
 static const std::string DEFAULT_UPLOAD_STORE = "/misc/var/uploads/";
 
@@ -51,3 +59,4 @@ const string CONN_LOG_FILE = LOG_FOLDER + "connections.log";
 const string REQ_LOG_FILE = LOG_FOLDER + "requests.log";
 const string RESP_LOG_FILE = LOG_FOLDER + "responses.log";
 const string ERROR_LOG_FILE = LOG_FOLDER + "errors.log";
+
