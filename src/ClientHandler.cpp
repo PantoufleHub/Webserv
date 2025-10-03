@@ -67,24 +67,26 @@ void ClientHandler::_checkRequestBuffer() {
 void ClientHandler::_read() {
 	int fd = _socket.getFd();
 	pollfd& pfd = _server->getPollFd(fd);
-	if (WebUtils::canRead(pfd)) {
-			char buffer[_buffer_size + 1];
-			ssize_t bytes_received = recv(fd, buffer, _buffer_size, 0);
-			buffer[_buffer_size] = '\0';
-		if (bytes_received < 0) {
-			cout << "Error reading from client " << fd << endl;
-			changeState(DONE);
+	if (!WebUtils::canRead(pfd))
+		return;
 
-		} else if (bytes_received == 0) {
-			cout << "Client on socket " << fd << " disconnected" << endl;
-			changeState(DONE);
+	char buffer[_buffer_size + 1];
+	ssize_t bytes_received = recv(fd, buffer, _buffer_size, 0);
+	buffer[_buffer_size] = '\0';
 
-		} else {
-			string data_read(buffer, bytes_received);
-			cout << "Received " << bytes_received << " bytes from client " << fd << endl;
-			_request_buffer += data_read;
-			_checkRequestBuffer();
-		}
+	if (bytes_received < 0) {
+		cout << "Error reading from client " << fd << endl;
+		changeState(DONE);
+
+	} else if (bytes_received == 0) {
+		cout << "Client on socket " << fd << " disconnected" << endl;
+		changeState(DONE);
+		
+	} else {
+		string data_read(buffer, bytes_received);
+		cout << "Received " << bytes_received << " bytes from client " << fd << endl;
+		_request_buffer += data_read;
+		_checkRequestBuffer();
 	}
 }
 
@@ -106,45 +108,47 @@ void ClientHandler::_process() {
 void ClientHandler::_respond() {
 	int fd = _socket.getFd();
 	pollfd& pfd = _server->getPollFd(fd);
-	if (WebUtils::canWrite(pfd)) {
-		ssize_t bytes_sent;
-		string chunk_to_send;
+	
+	if (!WebUtils::canWrite(pfd))
+		return;
+	
+	ssize_t bytes_sent;
+	string chunk_to_send;
 
-		if (!_sent_headers) {
-			chunk_to_send = _response->getHeadersString();
-			bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
-			if (bytes_sent <= 0) {
-				cout << "Error sending headers to client " << fd << endl;
-				changeState(DONE);
-				return;
-			}
-			cout << "Sent " << chunk_to_send << " to client " << fd << endl;
-			_sent_headers = true;
-			cout << "Headers sent to client on socket " << fd << endl;
-			return;
-		}
-
-		size_t chunk_bytes = _response->getBodyChunk(chunk_to_send, _bytes_sent, _buffer_size);
-		if (chunk_bytes == 0) {
-			cout << "No more body to send to client on socket " << fd << endl;
-			changeState(DONE);
-			return;
-		}
+	if (!_sent_headers) {
+		chunk_to_send = _response->getHeadersString();
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
-		_bytes_sent += bytes_sent;
-		cout << "Sent " << chunk_to_send << " to client " << fd << endl;
 		if (bytes_sent <= 0) {
-			cout << "Error sending to client " << fd << endl;
+			cout << "Error sending headers to client " << fd << endl;
 			changeState(DONE);
 			return;
 		}
-		else if (chunk_to_send.size() < _buffer_size || _bytes_sent >= _response->getBodySize())
-		{
-			cout << "Finshed sending response to client on socket " << fd << endl;
-			Logger::logResponse(_response->toString(), fd);
-			changeState(DONE);
-			return;
-		}
+		cout << "Sent " << chunk_to_send << " to client " << fd << endl;
+		_sent_headers = true;
+		cout << "Headers sent to client on socket " << fd << endl;
+		return;
+	}
+
+	size_t chunk_bytes = _response->getBodyChunk(chunk_to_send, _bytes_sent, _buffer_size);
+	if (chunk_bytes == 0) {
+		cout << "No more body to send to client on socket " << fd << endl;
+		changeState(DONE);
+		return;
+	}
+	bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
+	_bytes_sent += bytes_sent;
+	cout << "Sent " << chunk_to_send << " to client " << fd << endl;
+	if (bytes_sent <= 0) {
+		cout << "Error sending to client " << fd << endl;
+		changeState(DONE);
+		return;
+	}
+	else if (chunk_to_send.size() < _buffer_size || _bytes_sent >= _response->getBodySize())
+	{
+		cout << "Finshed sending response to client on socket " << fd << endl;
+		Logger::logResponse(_response->toString(), fd);
+		changeState(DONE);
+		return;
 	}
 }
 

@@ -75,7 +75,7 @@ size_t AHttpMessage::getBodyChunk(string &chunk, size_t pos, size_t length) cons
 	return chunk.size();
 }
 
-// Don't mind the fact it says headers but also includes the start line
+// Don't mind the fact it says headers but also includes the start line ITS A HEADER OR NOT IDKK MAN I'M NOT PAID ENOUGH
 const string AHttpMessage::getHeadersString() const {
 	string ret;
 
