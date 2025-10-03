@@ -31,4 +31,5 @@ class AHttpMessage {
 	const string& getBody() const;
 	size_t getBodyChunk(string &chunk, size_t pos, size_t length) const;
 	const string getHeadersString() const;
+	size_t getBodySize() const;
 };

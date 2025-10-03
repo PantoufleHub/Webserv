@@ -134,12 +134,14 @@ void ClientHandler::_respond() {
 		if (bytes_sent <= 0) {
 			cout << "Error sending to client " << fd << endl;
 			changeState(DONE);
+			return;
 		}
-		else if (chunk_to_send.size() < _buffer_size || _bytes_sent >= _response->getBody().size())
+		else if (chunk_to_send.size() < _buffer_size || _bytes_sent >= _response->getBodySize())
 		{
 			cout << "Finshed sending response to client on socket " << fd << endl;
 			Logger::logResponse(_response->toString(), fd);
 			changeState(DONE);
+			return;
 		}
 	}
 }

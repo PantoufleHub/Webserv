@@ -85,3 +85,7 @@ const string AHttpMessage::getHeadersString() const {
 
 	return ret;
 }
+
+size_t AHttpMessage::getBodySize() const {
+	return _body.size();
+}
