@@ -14,8 +14,11 @@ ClientHandler::ClientHandler(Socket socket, WebServer* server) : _socket(socket)
 }
 
 ClientHandler::~ClientHandler() {
-	if (_request)
+	cout << "Deleting CH for fd: " << _socket.getFd() << endl;
+	if (_request) {
+		cout << "Deleting request for fd: " << _socket.getFd() << endl;
 		delete _request;
+	}
 }
 
 void ClientHandler::_checkRequestBuffer() {

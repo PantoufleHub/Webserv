@@ -8,7 +8,13 @@ WebServer::WebServer(const string& config_file) {
 }
 
 WebServer::~WebServer() {
-	
+	map<int, ClientHandler*>::iterator client_it = _clients.begin(); 
+	while (client_it != _clients.end()) {
+		if (client_it->second) {
+			ClientHandler& client = *client_it->second;
+			delete &client;
+		}
+	}
 }
 
 pollfd& WebServer::getPollFd(int fd) {
@@ -112,7 +118,7 @@ void WebServer::_openClientSocket(int listening_socket) {
 	new_client_pollfd.fd = new_client_socket_fd;
 	// Change the events !?
 	new_client_pollfd.events = POLLIN;
-	_clients[new_client_socket_fd] = ClientHandler(Socket(new_client_socket_fd), this);
+	_clients[new_client_socket_fd] = new ClientHandler(Socket(new_client_socket_fd), this);
 	_pollfds.push_back(new_client_pollfd);
 
 	Logger::logConnection(new_client_addr, new_client_pollfd.fd);
@@ -120,16 +126,16 @@ void WebServer::_openClientSocket(int listening_socket) {
 }
 
 void WebServer::_updateClientSockets() {
-	map<int, ClientHandler>::iterator client_it;
+	map<int, ClientHandler*>::iterator client_it;
 	for (client_it = _clients.begin(); client_it != _clients.end(); ++client_it) {
-		client_it->second.update();
+		client_it->second->update();
 	}
 }
 
 void WebServer::_garbageCollectClients() {
-	map<int, ClientHandler>::iterator client_it = _clients.begin(); 
+	map<int, ClientHandler*>::iterator client_it = _clients.begin(); 
 	while (client_it != _clients.end()) {
-		ClientHandler& client = client_it->second;
+		ClientHandler& client = *client_it->second;
 
 		if (client.getState() == DONE) {
 			int client_fd = client_it->first;
@@ -137,6 +143,7 @@ void WebServer::_garbageCollectClients() {
 			close(client_fd);
 			removePollFd(client_fd);
 			_clients.erase(client_it);
+			delete &client;
 			Logger::logDisconnection(client_fd);
 			client_it = _clients.begin();
 		}

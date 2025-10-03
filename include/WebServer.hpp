@@ -28,7 +28,7 @@ class WebServer {
 	vector<VirtualServer> _virtual_servers;
 	vector<pollfd> _pollfds;
 	vector<Socket> _listening_sockets;
-	map<int, ClientHandler> _clients; // _pollfds.fd, ClientHandler
+	map<int, ClientHandler*> _clients; // _pollfds.fd, ClientHandler *
 	
 	void _openListeningSocket(string ip, int port);
 	void _openAllServerSockets();
