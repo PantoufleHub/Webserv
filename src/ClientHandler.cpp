@@ -33,6 +33,12 @@ void ClientHandler::changeState(ClientState newState) {
 		pfd.events = 0;
 	}
 	else if (_state == RESPONDING) {
+		// -- TEMP --
+		_response = new HttpResponse(200);
+		_response->setBody("text/html", "<html><body><h1>WebSaucisse surf sur de nouveax horions</h1></body></html>");
+		// ----------
+		_response_buffer = _response->toString();
+		_bytes_sent = 0;
 		pfd.events = POLLOUT;
 	}
 	else if (_state == DONE) {
@@ -100,16 +106,20 @@ void ClientHandler::_respond() {
 	int fd = _socket.getFd();
 	pollfd& pfd = _server->getPollFd(fd);
 	if (WebUtils::canWrite(pfd)) {
-		string http_response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
-		ssize_t bytes_sent = send(fd, http_response.c_str(), http_response.size(), 0);
-
-		if (bytes_sent < 0) {
+		string chunk_to_send = _response_buffer.substr(_bytes_sent, _buffer_size);
+		ssize_t bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
+		_bytes_sent += bytes_sent;
+		cout << "Sent " << bytes_sent << " bytes to client " << fd << endl;
+		if (bytes_sent <= 0) {
 			cout << "Error sending to client " << fd << endl;
-		} else {
-			cout << "Sent response to client on socket " << fd << endl;
-			Logger::logResponse(http_response, fd);
+			changeState(DONE);
 		}
-		changeState(DONE);
+		else if (_bytes_sent >= _response_buffer.size())
+		{
+			cout << "Finshed sending response to client on socket " << fd << endl;
+			Logger::logResponse(_response->toString(), fd);
+			changeState(DONE);
+		}
 	}
 }
 
