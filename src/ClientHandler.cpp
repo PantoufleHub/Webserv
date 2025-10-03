@@ -96,7 +96,7 @@ void ClientHandler::_process() {
 	// pollfd& pfd = _server->getPollFd(fd);
 	if  (!_request || !_request->isValid()) {
 		cout << "Invalid request from client on socket " << fd << endl;
-		changeState(DONE);
+		changeState(DONE); // Need to send error response
 		return;
 	}
 	cout << "Processing request from client on socket " << fd << endl;
