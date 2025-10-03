@@ -90,6 +90,8 @@ void ClientHandler::_read() {
 
 void ClientHandler::_process() {
 	// PROCESS GET/POST/DELETE
+	string method = _request->getMethod();
+
 	int fd = _socket.getFd();
 	// pollfd& pfd = _server->getPollFd(fd);
 	if  (!_request || !_request->isValid()) {
