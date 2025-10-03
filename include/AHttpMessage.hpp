@@ -29,4 +29,6 @@ class AHttpMessage {
 	const string& getHttpVersion() const;
 	const map<string, string>& getHeaders() const;
 	const string& getBody() const;
+	size_t getBodyChunk(string &chunk, size_t pos, size_t length) const;
+	const string getHeadersString() const;
 };

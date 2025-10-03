@@ -8,9 +8,7 @@ HttpResponse::HttpResponse(int status_code) : _status_code(status_code) {
 }
 
 void HttpResponse::setBody(string content_type, string body) {
-	cout << "yo2" << endl;
 	this->addHeader(HEADER_CONTENT_TYPE, content_type);
-	cout << "yo3" << endl;
 	this->addHeader(HEADER_CONTENT_LENGTH, StringUtils::sizetToString(body.length()));
 	AHttpMessage::setBody(body);
 }

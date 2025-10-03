@@ -66,3 +66,22 @@ const map<string, string>& AHttpMessage::getHeaders() const {
 const string& AHttpMessage::getBody() const {
 	return this->_body;
 }
+
+size_t AHttpMessage::getBodyChunk(string &chunk, size_t pos, size_t length) const {
+	if (pos >= _body.size()) {
+		return 0;
+	}
+	chunk = _body.substr(pos, length);
+	return chunk.size();
+}
+
+// Don't mind the fact it says headers but also includes the start line
+const string AHttpMessage::getHeadersString() const {
+	string ret;
+
+	ret += _getStartLine();
+	ret += _getHeaders();
+	ret +=  "\r\n";
+
+	return ret;
+}

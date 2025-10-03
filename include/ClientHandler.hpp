@@ -35,6 +35,7 @@ class ClientHandler {
 	HttpRequest *_request;
 	HttpResponse *_response;
 	string _response_buffer;
+	bool _sent_headers;
 	size_t _bytes_sent;
 
 	void _checkRequestBuffer();

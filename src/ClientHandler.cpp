@@ -12,6 +12,7 @@ ClientHandler::ClientHandler(Socket socket, WebServer* server) : _socket(socket)
 	_request = NULL;
 	_response = NULL;
 	_bytes_sent = 0;
+	_sent_headers = false;
 }
 
 ClientHandler::~ClientHandler() {
@@ -35,10 +36,8 @@ void ClientHandler::changeState(ClientState newState) {
 	else if (_state == RESPONDING) {
 		// -- TEMP --
 		_response = new HttpResponse(200);
-		_response->setBody("text/html", "<html><body><h1>WebSaucisse surf sur de nouveax horions</h1></body></html>");
+		_response->setBody("text/html", "<html><body><h1>WebSaucisse surfe sur de nouveax horions</h1></body></html>");
 		// ----------
-		_response_buffer = _response->toString();
-		_bytes_sent = 0;
 		pfd.events = POLLOUT;
 	}
 	else if (_state == DONE) {
@@ -106,15 +105,37 @@ void ClientHandler::_respond() {
 	int fd = _socket.getFd();
 	pollfd& pfd = _server->getPollFd(fd);
 	if (WebUtils::canWrite(pfd)) {
-		string chunk_to_send = _response_buffer.substr(_bytes_sent, _buffer_size);
-		ssize_t bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
+		ssize_t bytes_sent;
+		string chunk_to_send;
+
+		if (!_sent_headers) {
+			chunk_to_send = _response->getHeadersString();
+			bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
+			if (bytes_sent <= 0) {
+				cout << "Error sending headers to client " << fd << endl;
+				changeState(DONE);
+				return;
+			}
+			cout << "Sent " << chunk_to_send << " to client " << fd << endl;
+			_sent_headers = true;
+			cout << "Headers sent to client on socket " << fd << endl;
+			return;
+		}
+
+		size_t chunk_bytes = _response->getBodyChunk(chunk_to_send, _bytes_sent, _buffer_size);
+		if (chunk_bytes == 0) {
+			cout << "No more body to send to client on socket " << fd << endl;
+			changeState(DONE);
+			return;
+		}
+		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
 		_bytes_sent += bytes_sent;
-		cout << "Sent " << bytes_sent << " bytes to client " << fd << endl;
+		cout << "Sent " << chunk_to_send << " to client " << fd << endl;
 		if (bytes_sent <= 0) {
 			cout << "Error sending to client " << fd << endl;
 			changeState(DONE);
 		}
-		else if (_bytes_sent >= _response_buffer.size())
+		else if (chunk_to_send.size() < _buffer_size || _bytes_sent >= _response->getBody().size())
 		{
 			cout << "Finshed sending response to client on socket " << fd << endl;
 			Logger::logResponse(_response->toString(), fd);
