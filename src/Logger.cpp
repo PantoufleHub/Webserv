@@ -8,10 +8,6 @@ static ofstream& _disconnection_log = _connection_log;  // Reuse connection log 
 static ofstream _response_log(RESP_LOG_FILE.c_str(), ios::trunc);
 static ofstream _error_log(ERROR_LOG_FILE.c_str(), ios::trunc);
 
-// Logger::Logger() {
-
-// }
-
 void Logger::_log(ofstream& log, const ostringstream& os) {
 	if (!log.is_open())
 		cerr << "Log not open" << std::endl;

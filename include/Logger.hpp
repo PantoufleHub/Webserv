@@ -5,14 +5,9 @@
 #include <sstream>
 #include <fstream>
 #include <arpa/inet.h>
+#include "Constants.hpp"
 
 using namespace std;
-
-const string LOG_FOLDER = "misc/logs/";
-const string CONN_LOG_FILE = LOG_FOLDER + "connections.log";
-const string REQ_LOG_FILE = LOG_FOLDER + "requests.log";
-const string RESP_LOG_FILE = LOG_FOLDER + "responses.log";
-const string ERROR_LOG_FILE = LOG_FOLDER + "errors.log";
 
 class Logger {
    private:
