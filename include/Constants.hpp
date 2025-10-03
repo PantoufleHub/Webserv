@@ -23,6 +23,25 @@ const string HEADER_ACCEPT = "Accept";
 
 const string TYPE_HTML = "text/html";
 
+const int HTTP_CODE_OK = 200;
+const int HTTP_CODE_CREATED = 201;
+const int HTTP_CODE_NO_CONTENT = 204;
+const int HTTP_CODE_MOVED_PERMANENTLY = 301;
+const int HTTP_CODE_FOUND = 302;
+const int HTTP_CODE_BAD_REQUEST = 400;
+const int HTTP_CODE_FORBIDDEN = 403;
+const int HTTP_CODE_NOT_FOUND = 404;
+const int HTTP_CODE_METHOD_NOT_ALLOWED = 405;
+const int HTTP_CODE_REQUEST_TIMEOUT = 408;
+const int HTTP_CODE_LENGTH_REQUIRED = 411;
+const int HTTP_CODE_PAYLOAD_TOO_LARGE = 413;
+const int HTTP_CODE_URI_TOO_LONG = 414;
+const int HTTP_CODE_UNSUPPORTED_MEDIA = 415;
+const int HTTP_CODE_TOO_MANY_REQUESTS = 429;
+const int HTTP_CODE_SERVICE_UNAVAILABLE = 503;
+const int HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED = 505;
+const int HTTP_CODE_INTERNAL_SERVER_ERROR = 500;
+
 // Config file constants
 static const std::string DEFAULT_UPLOAD_STORE = "/misc/var/uploads/";
 
