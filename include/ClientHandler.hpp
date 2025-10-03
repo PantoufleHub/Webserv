@@ -7,6 +7,12 @@
 #include "Socket.hpp"
 #include "WebServer.hpp"
 #include "HttpRequestParser.hpp"
+#include "HttpResponse.hpp"
+#include "WebUtils.hpp"
+#include "Logger.hpp"
+#include "Constants.hpp"
+#include "Macros.hpp"
+#include "HttpResponse.hpp"
 
 using namespace std;
 
@@ -27,6 +33,8 @@ class ClientHandler {
 	ClientState _state;
 	string _request_buffer;
 	HttpRequest *_request;
+	HttpResponse *_response;
+	size_t _bytes_sent;
 
 	void _checkRequestBuffer();
    public:
@@ -35,6 +43,9 @@ class ClientHandler {
 	ClientHandler(Socket socket, WebServer* server);
 	~ClientHandler();
 
+	void _read();
+	void _process();
+	void _respond();
 	void changeState(ClientState newState);
 
 	ClientState getState() const;

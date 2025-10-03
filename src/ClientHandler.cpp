@@ -10,6 +10,8 @@ ClientHandler::ClientHandler(Socket socket, WebServer* server) : _socket(socket)
 	_state = READING;
 	_buffer_size = DEFAULT_BUFFER_SIZE;
 	_request = NULL;
+	_response = NULL;
+	_bytes_sent = 0;
 }
 
 ClientHandler::~ClientHandler() {
@@ -57,54 +59,67 @@ void ClientHandler::_checkRequestBuffer() {
 	}
 }
 
-void ClientHandler::update() {
+void ClientHandler::_read() {
 	int fd = _socket.getFd();
 	pollfd& pfd = _server->getPollFd(fd);
-	if (_state == READING) {
-		if (WebUtils::canRead(pfd)) {
+	if (WebUtils::canRead(pfd)) {
 			char buffer[_buffer_size + 1];
 			ssize_t bytes_received = recv(fd, buffer, _buffer_size, 0);
 			buffer[_buffer_size] = '\0';
-			if (bytes_received < 0) {
-				cout << "Error reading from client " << fd << endl;
-				changeState(DONE);
-
-			} else if (bytes_received == 0) {
-				cout << "Client on socket " << fd << " disconnected" << endl;
-				changeState(DONE);
-
-			} else {
-				string data_read(buffer, bytes_received);
-				cout << "Received " << bytes_received << " bytes from client " << fd << endl;
-				_request_buffer += data_read;
-				_checkRequestBuffer();
-			}
-		}
-	}
-	if (_state == PROCESSING) {
-		// PROCESS GET/POST/DELETE
-		if  (!_request || !_request->isValid()) {
-			cout << "Invalid request from client on socket " << fd << endl;
+		if (bytes_received < 0) {
+			cout << "Error reading from client " << fd << endl;
 			changeState(DONE);
-			return;
-		}
-		cout << "Processing request from client on socket " << fd << endl;
-		changeState(RESPONDING);
-	}
-	if (_state == RESPONDING) {
-		if (WebUtils::canWrite(pfd)) {
-			string http_response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
-			ssize_t bytes_sent = send(fd, http_response.c_str(), http_response.size(), 0);
 
-			if (bytes_sent < 0) {
-				cout << "Error sending to client " << fd << endl;
-			} else {
-				cout << "Sent response to client on socket " << fd << endl;
-				Logger::logResponse(http_response, fd);
-			}
+		} else if (bytes_received == 0) {
+			cout << "Client on socket " << fd << " disconnected" << endl;
 			changeState(DONE);
+
+		} else {
+			string data_read(buffer, bytes_received);
+			cout << "Received " << bytes_received << " bytes from client " << fd << endl;
+			_request_buffer += data_read;
+			_checkRequestBuffer();
 		}
 	}
+}
+
+void ClientHandler::_process() {
+	// PROCESS GET/POST/DELETE
+	int fd = _socket.getFd();
+	// pollfd& pfd = _server->getPollFd(fd);
+	if  (!_request || !_request->isValid()) {
+		cout << "Invalid request from client on socket " << fd << endl;
+		changeState(DONE);
+		return;
+	}
+	cout << "Processing request from client on socket " << fd << endl;
+	changeState(RESPONDING);
+}
+
+void ClientHandler::_respond() {
+	int fd = _socket.getFd();
+	pollfd& pfd = _server->getPollFd(fd);
+	if (WebUtils::canWrite(pfd)) {
+		string http_response = "HTTP/1.1 200 OK\r\nContent-Length: 13\r\n\r\nHello, World!";
+		ssize_t bytes_sent = send(fd, http_response.c_str(), http_response.size(), 0);
+
+		if (bytes_sent < 0) {
+			cout << "Error sending to client " << fd << endl;
+		} else {
+			cout << "Sent response to client on socket " << fd << endl;
+			Logger::logResponse(http_response, fd);
+		}
+		changeState(DONE);
+	}
+}
+
+void ClientHandler::update() {
+	if (_state == READING)
+		_read();
+	if (_state == PROCESSING)
+		_process();
+	if (_state == RESPONDING)
+		_respond();
 }
 
 ClientState ClientHandler::getState() const {
