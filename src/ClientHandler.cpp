@@ -9,7 +9,7 @@ ClientHandler::ClientHandler(Socket socket, WebServer* server) : _socket(socket)
 			<< endl;
 	(void)_server;
 	_state = PROCESSING;
-	_buffer_size = 1024;
+	_buffer_size = DEFAULT_BUFFER_SIZE;
 }
 
 ClientHandler::~ClientHandler() {}
@@ -19,9 +19,9 @@ void ClientHandler::update() {
 	pollfd& pfd = _server->getPollFd(fd);
 	if (_state == PROCESSING) {
 		if (WebUtils::canRead(pfd)) {
-			char buffer[_buffer_size];
+			char buffer[_buffer_size + 1];
 			ssize_t bytes_received = recv(fd, buffer, _buffer_size, 0);
-			buffer[_buffer_size - 1] = '\0';
+			buffer[_buffer_size] = '\0';
 
 			if (bytes_received < 0) {
 				cout << "Error reading from client " << fd << endl;
@@ -32,9 +32,9 @@ void ClientHandler::update() {
 				_state = DONE;
 
 			} else {
-				string request(buffer, bytes_received);
-				cout << "Received request from client " << fd << endl;
-				Logger::logRequest(request, fd);
+				string data_read(buffer, bytes_received);
+				cout << "Received " << bytes_received << " bytes from client " << fd << endl;
+				_request_buffer += data_read;
 				pfd.events = POLLOUT;
 				_state = RESPONDING;
 			}

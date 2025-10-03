@@ -23,6 +23,7 @@ class ClientHandler {
 	Socket _socket; // You can find the useful fd in here
 	WebServer* _server;
 	ClientState _state;
+	string _request_buffer;
    public:
    	// For map
    	ClientHandler();
