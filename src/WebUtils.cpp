@@ -18,7 +18,7 @@ bool WebUtils::canWrite(pollfd& pfd) {
 	return pfd.revents & POLLOUT;
 }
 
-EntryPoint WebUtils::getSocketEntryPoint(Socket socket, bool peer) {
+const EntryPoint WebUtils::getSocketEntryPoint(Socket socket, bool peer) {
 	int fd = socket.getFd();
 	sockaddr_in addr;
 	socklen_t addr_len = sizeof(addr);
