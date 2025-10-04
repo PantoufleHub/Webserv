@@ -426,8 +426,8 @@ void ClientHandler::_cgi() {
 void ClientHandler::_error() {
 	// HANDLE ERRORS
 	int fd = _socket.getFd();
-
 	cout << "Handling Error for request from client on socket " << fd << endl;
+	HttpUtils::getErrorPage(_response, *_parsed_info.matching_location, _response.getStatusCode());
 
 	_changeState(RESPONDING);
 }
