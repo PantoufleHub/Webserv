@@ -39,4 +39,5 @@ class HttpUtils {
 	static string unchunkString(const string &body, size_t &pos);
 	static size_t chunkString(const string &body, size_t &pos, size_t length, string &return_chunk);
 	static string getStringInChunk(const string& chunk);
+	static ssize_t write_data(const int fd, const string body, size_t &pos, size_t buffer_size);
 };

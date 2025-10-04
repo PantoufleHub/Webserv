@@ -4,9 +4,6 @@ void ClientHandler::_init_() {
 	_state = READING;
 	_buffer_size = DEFAULT_BUFFER_SIZE;
 	_request = NULL;
-	// -- TEMP --
-	_response.setBody("text/html", "<html><body><h1>WebSaucisse surfe sur de nouveax horions</h1></body></html>");
-	// ----------
 
 	// Response info init
 	_response_info.bytes_sent = 0;
@@ -20,6 +17,10 @@ void ClientHandler::_init_() {
 	_parsed_info.matching_location = NULL;
 	_parsed_info.errors = NULL;
 	_parsed_info.full_path = "";
+
+	// Post info init
+	_post_info.fd = -1;
+	_post_info.parsed = false;
 }
 
 ClientHandler::ClientHandler() {}
@@ -355,9 +356,56 @@ void ClientHandler::_getResource() {
 }
 
 void ClientHandler::_postResource() {
-	cout << "Posting resource to path: " << _request->getPath() << " with content: " << _request->getBody() << endl;
+	const string& body = _request->getBody();
+	
+	// NEEDS TO BE FIXED
+	if (!_post_info.parsed) {
+		_post_info.parsed = true;
+		const string& root = _parsed_info.matching_server->getRoot();
+		const string& path = root.substr(0, root.size()-1) + _request->getPath();
+		cout << "Posting resource to path: " << path << " with content: " << _request->getBody() << endl;
+		string name = path; // Should not be the direct path!
 
-	// _response_status_code = HTTP_CODE_CREATED;
+		struct stat statbuf;
+		int stat_res = stat(name.c_str(), &statbuf);
+
+		if (stat_res == 0) {
+			cout << "File already exists" << endl;
+			_response.setStatusCode(HTTP_CODE_CONFLICT);
+			_changeState(ERRORING);
+			return;
+		}
+
+		_post_info.fd = open(name.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
+		if (_post_info.fd < 0) {
+			cout << "Error opening fd" << endl; 
+			_response.setStatusCode(HTTP_CODE_INTERNAL_SERVER_ERROR);
+			_changeState(ERRORING);
+			return;
+		}
+	} else {
+		static size_t pos = 0;
+		ssize_t bytes_read;
+	
+		bytes_read = HttpUtils::write_data(_post_info.fd, body, pos, _buffer_size);
+		if (bytes_read > 0) {
+			cout << "Wrote " << bytes_read << " to file " << _post_info.fd << endl;
+		}
+		else if (bytes_read == 0) {
+			cout << "Finished posting" << endl;
+			close(_post_info.fd);
+			_response.setStatusCode(HTTP_CODE_CREATED);
+			_changeState(RESPONDING);
+			return;
+		}
+		else if (bytes_read < 0) {
+			_response.setStatusCode(HTTP_CODE_INTERNAL_SERVER_ERROR);
+			_changeState(ERRORING);
+			cout << "Error writing to file" << endl;
+			return;
+		}
+	}
+
 }
 
 void ClientHandler::_deleteResource() {

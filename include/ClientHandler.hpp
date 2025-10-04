@@ -44,17 +44,23 @@ typedef struct ResponseInfo {
 	size_t		bytes_sent; // For body
 } ResponseInfo;
 
+typedef struct PostInfo{
+	bool	parsed;
+	int		fd;
+} PostInfo;
+
 class ClientHandler {
    private:
-	size_t _buffer_size;
-	Socket _socket;
-	WebServer* _server;
-	ClientState _state;
-	string _request_buffer;
-	HttpRequest *_request;
-	HttpResponse _response;
-	ResponseInfo _response_info;
-	ParsedInfo _parsed_info;
+	size_t			_buffer_size;
+	Socket			_socket;
+	WebServer*		_server;
+	ClientState		_state;
+	string			_request_buffer;
+	HttpRequest*	_request;
+	HttpResponse	_response;
+	ResponseInfo	_response_info;
+	ParsedInfo		_parsed_info;
+	PostInfo		_post_info;
 
 	void _checkRequestBuffer();
 	void _changeState(ClientState newState);

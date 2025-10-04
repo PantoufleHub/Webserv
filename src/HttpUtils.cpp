@@ -84,6 +84,8 @@ const string HttpUtils::getHttpStatusMessage(int status_code) {
 			return "Method Not Allowed";
 		case 408:
 			return "Request Timeout";
+		case 409:
+			return "Conflict";
 		case 411:
 			return "Length Required";
 		case 413:
@@ -266,3 +268,24 @@ size_t HttpUtils::chunkFile(int fd, size_t chunk_size, string &return_chunk) {
 	cout << "Chunked " << bytes_read << " bytes" << endl;
 	return bytes_read;
 }
+
+/// @brief Writes data to a file
+/// @param fd The file to write to
+/// @param body The content to wite
+/// @param pos The position in body to start writing from
+/// @param buffer_size The max amount of bytes to write
+/// @return The number of bytes written
+ssize_t HttpUtils::write_data(const int fd, const string body, size_t &pos, size_t buffer_size) {
+	ssize_t bytes_read;
+
+	if (pos >= body.size())
+		return 0;
+	if (pos + buffer_size > body.size())
+		buffer_size = body.size() - pos;
+	bytes_read = write(fd, &body[pos], buffer_size);
+	pos += buffer_size;
+
+	cout << "Wrote " << bytes_read << " bytes to file" << endl;
+	return bytes_read;
+}
+
