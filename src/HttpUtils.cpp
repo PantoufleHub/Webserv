@@ -266,4 +266,3 @@ size_t HttpUtils::chunkFile(int fd, size_t chunk_size, string &return_chunk) {
 	cout << "Chunked " << bytes_read << " bytes" << endl;
 	return bytes_read;
 }
-
