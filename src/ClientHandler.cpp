@@ -217,10 +217,10 @@ void ClientHandler::_validateMatchingLocation() {
 	const Location& matching_location = *_parsed_info.matching_location;
 	const string method = _request->getMethod();
 
-	cout << "DEBUG: Validating method '" << method << "' for location '" << matching_location.getNames()[0] << "'" << endl;
+	cout << "Validating method '" << method << "' for location '" << matching_location.getNames()[0] << "'" << endl;
 	
 	if (!matching_location.checkMethod(method)) {
-		cout << "DEBUG: Method '" << method << "' not allowed, setting 405" << endl;
+		cout << "Method '" << method << "' not allowed, setting 405" << endl;
 		_response.setStatusCode(HTTP_CODE_METHOD_NOT_ALLOWED);
 		_changeState(ERRORING);
 		return;
@@ -364,15 +364,17 @@ void ClientHandler::_deleteResource() {
 	const string path = _parsed_info.full_path;
 	cout << "Deleting resource at path: " << path << endl;
 
-	// if (remove(path.c_str()) != 0) {
-	// 	cerr << "Error deleting file: " << path << endl;
-	// 	_response_status_code = HTTP_CODE_FORBIDDEN;
-	// 	return;
-	// }
+	if (remove(path.c_str()) != 0) {
+		cerr << "Error deleting file: " << path << endl;
+		_response.setStatusCode(HTTP_CODE_FORBIDDEN);
+		_changeState(ERRORING);
+		return;
+	}
 
-	// // resend page TOoO ANNAOYING?
-	// _response = new HttpResponse(HTTP_CODE_NO_CONTENT);
-	// _status = SENDING; // No generation needed
+	// resend page TOoO ANNAOYING?
+	_response.setStatusCode(HTTP_CODE_NO_CONTENT);
+	_changeState(RESPONDING);
+	return; // useless? yes but whatever, i grew attached to it
 }
 
 void ClientHandler::_process() {
