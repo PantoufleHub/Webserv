@@ -109,8 +109,8 @@ void WebServer::_openClientSocket(int listening_socket) {
 	cout << "client connected: " << inet_ntoa(new_client_addr.sin_addr) << ":" << ntohs(new_client_addr.sin_port)
 	     << endl;
 
-	cout << "Client from entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd), true) << endl;
-	cout << "Server entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd)) << endl;
+	// cout << "Client from entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd), true) << endl;
+	// cout << "Server entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd)) << endl;
 
 	fcntl(new_client_socket_fd, fcntl(new_client_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 
@@ -159,7 +159,7 @@ void WebServer::_garbageCollectClients() {
 
 void WebServer::run() {
 	_openAllServerSockets();
-	int poll_timeout = 1000;
+	int poll_timeout = 2500;
 
 	while (1) {
 		cout << "-- POLL: " << poll (&_pollfds[0], _pollfds.size(), poll_timeout) << " pollfds updated --" << endl;

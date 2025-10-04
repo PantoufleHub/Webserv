@@ -38,6 +38,12 @@ typedef struct ParsedInfo {
 	string							full_path;
 } ParsedInfo;
 
+typedef struct ResponseInfo {
+	bool		sent_headers;
+	int 		fd_to_send; // For sending files
+	size_t		bytes_sent; // For body
+} ResponseInfo;
+
 class ClientHandler {
    private:
 	size_t _buffer_size;
@@ -47,9 +53,7 @@ class ClientHandler {
 	string _request_buffer;
 	HttpRequest *_request;
 	HttpResponse _response;
-	string _response_buffer;
-	bool _sent_headers;
-	size_t _bytes_sent;
+	ResponseInfo _response_info;
 	ParsedInfo _parsed_info;
 
 	void _checkRequestBuffer();
@@ -69,6 +73,10 @@ class ClientHandler {
 	void _validateMatchingLocation();
 	void _parse();
 
+	void _getResourceDirectory();
+	void _getResource();
+	void _postResource();
+	void _deleteResource();
 	void _process();
 
 	void _cgi();

@@ -157,3 +157,113 @@ void HttpUtils::getAutoIndexPage(HttpResponse &response, const Location& locatio
 	closedir(dir);
 	response.addBody(TYPE_HTML, _getAutoIndexPageFooter());
 }
+
+/// @brief Gets a chunk of data from a http body
+/// @param body The body of the http message
+/// @param pos The position from which to start parsing
+/// @return The retrieved chunked from the body in string format
+string HttpUtils::unchunkString(const string &body, size_t &pos) {
+	if (pos >= body.size()) {
+		cout << "Reached end of body" << endl;
+		return "";
+	}
+
+	size_t find_crlf = body.find("\r\n", pos);
+	if (find_crlf == string::npos) {
+		cout << "No CRLF found\n";
+		return "";
+	}
+
+	string hex_size = body.substr(pos, find_crlf - pos);
+	if (!StringUtils::is_hex_string(hex_size)) {
+		cout << "Not a hex string: " << hex_size << "\n";
+		return "";
+	}
+
+	size_t chunk_size = strtol(hex_size.c_str(), NULL, 16);
+	if (chunk_size == 0) {
+		if (body.substr(find_crlf + 2, 2) != "\r\n") {
+			cout << "No final CRLF after 0 chunk\n";
+			return "";
+		}
+	}
+
+	string chunk = body.substr(find_crlf + 2, chunk_size);
+	pos = find_crlf + 2 + chunk_size + 2;
+	cout << "Unchunked " << chunk.size() << " bytes" << endl;
+	return chunk;
+}
+
+/// @brief Cut a string into chunks
+/// @param body The full body to chunk
+/// @param pos The position to start chunking from
+/// @param length The max length of the chunk
+/// @param return_chunk The chunk returned
+/// @return The size of the chunk returned
+size_t HttpUtils::chunkString(const string &body, size_t &pos, size_t length, string &return_chunk) {
+	if (length == 0 || pos > body.size())
+	return 0;
+
+	return_chunk.clear();
+
+	if (pos == body.size()) {
+		return_chunk = "0\r\n\r\n";
+		pos++;
+		cout << "Reached end of file" << endl;
+		return return_chunk.size();
+	}
+
+	stringstream strstr_chunk;
+	string body_part = body.substr(pos, length);
+	strstr_chunk << hex << body_part.size() << "\r\n" << body_part << "\r\n";
+	return_chunk = strstr_chunk.str();
+	pos += length;
+
+	if (pos > body.size())
+		pos = body.size();
+
+	cout << "Chunked " << return_chunk.size() << " bytes" << endl;
+	return return_chunk.size();
+}
+
+string HttpUtils::getStringInChunk(const string& chunk) {
+	size_t size = chunk.size();
+	stringstream retstrstr; //nice name huh
+
+	retstrstr << hex << size << "\r\n" << chunk << "\r\n";
+	return retstrstr.str();;
+}
+
+/// @brief Cut the contents of a file into chunks
+/// @param fd The file to chunk
+/// @param chunk_size The max size of the chunk
+/// @param return_chunk The chunk returned
+/// @return The number of bytes read from the fd
+size_t HttpUtils::chunkFile(int fd, size_t chunk_size, string &return_chunk) {
+	return_chunk.clear();
+	
+	if (chunk_size == 0)
+	return 0;
+
+	char buffer[chunk_size + 1];
+	bzero(buffer, chunk_size + 1);
+	ssize_t bytes_read = read(fd, buffer, chunk_size);
+
+	if (bytes_read < 0) {
+		cout << "Read error" << endl;
+		return 0;
+	} else if (bytes_read == 0) {
+		return_chunk = "0\r\n\r\n";
+		cout << "Reached end of file" << endl;
+		return 0;
+	}
+
+	stringstream strstr_chunk;
+	string body_part(buffer, bytes_read);
+	strstr_chunk << hex << body_part.size() << "\r\n" << body_part << "\r\n";
+	return_chunk = strstr_chunk.str();
+
+	cout << "Chunked " << bytes_read << " bytes" << endl;
+	return bytes_read;
+}
+

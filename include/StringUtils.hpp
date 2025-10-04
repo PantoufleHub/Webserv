@@ -6,10 +6,15 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 class StringUtils {
    public:
-	static std::string sizetToString(std::size_t value);
-	static bool strInStrs(const std::string& str, const std::vector<std::string>& strs);
-	static bool insCompare(const std::string& str1, const std::string& str2);
-	static std::size_t nbCharsInStr(char c, const std::string& str);
+	static string sizetToString(size_t value);
+	static bool strInStrs(const string& str, const vector<string>& strs);
+	static bool insCompare(const string& str1, const string& str2);
+	static size_t nbCharsInStr(char c, const string& str);
+	static string escapeNewlines(const string& input);
+	static bool is_hex_char(char c);
+	static bool is_hex_string(const string &s) ;
 };

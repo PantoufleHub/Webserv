@@ -7,6 +7,9 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <strings.h>
 
 #include "Location.hpp"
 #include "HttpResponse.hpp"
@@ -32,4 +35,8 @@ class HttpUtils {
 	static const string getHttpStatusMessage(int status_code);
 	static void getErrorPage(HttpResponse &response, const Location& location, int status_code);
 	static void getAutoIndexPage(HttpResponse &response, const Location& location, const string& path);
+	static size_t chunkFile(int fd, size_t chunk_size, string &return_chunk);
+	static string unchunkString(const string &body, size_t &pos);
+	static size_t chunkString(const string &body, size_t &pos, size_t length, string &return_chunk);
+	static string getStringInChunk(const string& chunk);
 };

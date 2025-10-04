@@ -18,8 +18,11 @@ const string HEADER_CONTENT_LENGTH = "Content-Length";
 const string HEADER_CONNECTION = "Connection";
 const string HEADER_HOST = "Host";
 const string HEADER_ACCEPT = "Accept";
+const string HEADER_TRANSFER_ENCODING = "Transfer-Encoding";
 
 const string TYPE_HTML = "text/html";
+const string TYPE_PLAIN = "text/plain";
+const string ENCODING_CHUNKED = "chunked";
 
 const int HTTP_CODE_OK = 200;
 const int HTTP_CODE_CREATED = 201;

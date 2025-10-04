@@ -7,8 +7,13 @@ void ClientHandler::_init_() {
 	// -- TEMP --
 	_response.setBody("text/html", "<html><body><h1>WebSaucisse surfe sur de nouveax horions</h1></body></html>");
 	// ----------
-	_bytes_sent = 0;
-	_sent_headers = false;
+
+	// Response info init
+	_response_info.bytes_sent = 0;
+	_response_info.sent_headers = false;
+	_response_info.fd_to_send = -1;
+
+	// Parsed info init
 	_parsed_info.virtual_servers = NULL;
 	_parsed_info.matching_server = NULL;
 	_parsed_info.locations = NULL;
@@ -33,6 +38,10 @@ ClientHandler::~ClientHandler() {
 		cout << "Deleting request for fd: " << _socket.getFd() << endl;
 		delete _request;
 	}
+	if (_response_info.fd_to_send != -1) {
+		cout << "Closing file descriptor to send: " << _response_info.fd_to_send << endl;
+		close(_response_info.fd_to_send);
+	}
 }
 
 void ClientHandler::_changeState(ClientState newState) {
@@ -53,11 +62,20 @@ void ClientHandler::_changeState(ClientState newState) {
 	}
 	else if (_state == ERRORING) {
 		pfd.events = 0;
+
 		// Reset response
 		_response.setBody("text/html", "");
 	}
 	else if (_state == RESPONDING) {
+		cout	<< "Preparing to respond to client on socket " << fd << "\n"
+				<< "Fd to send: " << _response_info.fd_to_send << endl;
 		pfd.events = POLLOUT;
+
+		// Set headers before sending
+		if (_response_info.fd_to_send == -1)
+			_response.addHeader(HEADER_CONTENT_LENGTH, StringUtils::sizetToString(_response.getBodySize()));
+		else
+			_response.addHeader(HEADER_TRANSFER_ENCODING, ENCODING_CHUNKED);
 	}
 	else if (_state == DONE) {
 		pfd.events = 0;
@@ -168,7 +186,7 @@ void ClientHandler::_findVirtualServer() {
 			return;
 		}
 	}
-	cerr << "No server matched, using default: " << servers[serv_index].getNames()[0] << endl;
+	cout << "No server matched, using default: " << servers[serv_index].getNames()[0] << endl;
 	_parsed_info.matching_server = &servers[serv_index];
 	return;
 }
@@ -259,17 +277,139 @@ void ClientHandler::_parse() {
 	_changeState(PROCESSING);
 }
 
-void ClientHandler::_process() {
-	// PROCESS GET/POST/DELETE
-	int fd = _socket.getFd();
-	// pollfd& pfd = _server->getPollFd(fd);
-	if  (!_request || !_request->isValid()) {
-		cout << "Invalid request from client on socket " << fd << endl;
-		_changeState(DONE); // Need to send error response
+void ClientHandler::_getResourceDirectory() {
+	const Location& location = *_parsed_info.matching_location;
+	const string path = _parsed_info.full_path;
+	bool auto_index = location.getAutoIndex();
+	
+	if (auto_index) {
+		cout << "Autoindex is enabled, generating page" << endl;
+		HttpUtils::getAutoIndexPage(_response, location, path);
+		_changeState(RESPONDING);
+		return;
+	} else {
+		cout << "Autoindex is disabled, searching for index files..." << endl;
+		ifstream file;
+		for (size_t i = 0; i < location.getIndexes().size(); i++) {
+			string test_path = path + location.getIndexes()[i];
+			cout << "Testing index file: " << test_path << endl;
+			file.open(test_path.c_str());
+			if (file.is_open()) {
+				cout << "Found index file: " << test_path << endl;
+				_response_info.fd_to_send = open(test_path.c_str(), O_RDONLY);
+				if (_response_info.fd_to_send < 0) {
+					cerr << "Error opening file descriptor for: " << test_path << endl;
+					_response.setStatusCode(HTTP_CODE_FORBIDDEN);
+					_changeState(ERRORING);
+					return;
+				}
+				_changeState(RESPONDING);
+				file.close();
+				return;
+			}
+		}
+	}
+
+	cout << "No index file found" << endl;
+	_response.setStatusCode(HTTP_CODE_FORBIDDEN);
+	_changeState(ERRORING);
+}
+
+void ClientHandler::_getResource() {
+	const string path = _parsed_info.full_path;
+	cout << "Getting resource for path: " << path << endl;
+
+    struct stat info;
+    bool fileExists = stat(path.c_str(), &info) == 0;
+	if (!fileExists)
+	{
+		cout << "File does not exist or can't be accessed: " << path << endl;
+		_response.setStatusCode(HTTP_CODE_NOT_FOUND);
+		_changeState(ERRORING);
 		return;
 	}
-	cout << "Processing request from client on socket " << fd << endl;
+
+	bool is_directory = path[path.size() - 1] == '/';
+	if (is_directory) {
+		cout << "Request for a directory" << endl;
+		_getResourceDirectory();
+		return;
+	}
+
+	bool isDir = S_ISDIR(info.st_mode);
+	if (isDir) {
+		cerr << "Found directory not a file" << endl;
+		_response.setStatusCode(HTTP_CODE_NOT_FOUND);
+		_changeState(ERRORING);
+		return;
+	}
+
+	_response_info.fd_to_send = open(path.c_str(), O_RDONLY);
+	if (_response_info.fd_to_send < 0) {
+		cerr << "Error opening file descriptor for: " << path << endl;
+		_response.setStatusCode(HTTP_CODE_FORBIDDEN);
+		_changeState(ERRORING);
+		return;
+	}
 	_changeState(RESPONDING);
+}
+
+void ClientHandler::_postResource() {
+	cout << "Posting resource to path: " << _request->getPath() << " with content: " << _request->getBody() << endl;
+
+	// _response_status_code = HTTP_CODE_CREATED;
+}
+
+void ClientHandler::_deleteResource() {
+	const string path = _parsed_info.full_path;
+	cout << "Deleting resource at path: " << path << endl;
+
+	// if (remove(path.c_str()) != 0) {
+	// 	cerr << "Error deleting file: " << path << endl;
+	// 	_response_status_code = HTTP_CODE_FORBIDDEN;
+	// 	return;
+	// }
+
+	// // resend page TOoO ANNAOYING?
+	// _response = new HttpResponse(HTTP_CODE_NO_CONTENT);
+	// _status = SENDING; // No generation needed
+}
+
+void ClientHandler::_process() {
+	// PROCESS GET/POST/DELETE
+	// int fd = _socket.getFd();
+	// pollfd& pfd = _server->getPollFd(fd);
+	const Location& matching_location = *_parsed_info.matching_location;
+
+	if (matching_location.getRedirect().size() > 0) {
+		cout << "Location has a redirect configured, redirecting to " << matching_location.getRedirect().begin()->second
+		     << endl;
+		_response.setStatusCode(matching_location.getRedirect().begin()->first);
+		_response.addHeader("Location", matching_location.getRedirect().begin()->second);
+		cout << "Redirecting to " << matching_location.getRedirect().begin()->second << endl;
+		_changeState(RESPONDING); // No generation needed
+		return;
+	}
+
+	const string path = _request->getPath();
+	const string method = _request->getMethod();
+	if (method == METHOD_GET) {
+		cout << "Handling GET request for path: " << path << endl;
+		_getResource();
+
+	} else if (method == METHOD_POST) {
+		cout << "Handling POST request for path: " << path << endl;
+		_postResource();
+
+	} else if (method == METHOD_DELETE) {
+		cout << "Handling DELETE request for path: " << path << endl;
+		_deleteResource();
+
+	} else {
+		_response.setStatusCode(HTTP_CODE_METHOD_NOT_ALLOWED);
+		_changeState(ERRORING);
+		return;
+	}
 }
 
 void ClientHandler::_cgi() {
@@ -297,43 +437,55 @@ void ClientHandler::_respond() {
 	if (!WebUtils::canWrite(pfd))
 		return;
 	
-	ssize_t bytes_sent;
 	string chunk_to_send;
-
-	if (!_sent_headers) {
+	ssize_t chunk_size;
+	ssize_t bytes_sent;
+	
+	if (!_response_info.sent_headers) {
 		chunk_to_send = _response.getHeadersString();
+		_response_info.sent_headers = true;
+		cout << "Sending headers to client on socket " << fd << endl;
+		cout << chunk_to_send << endl;
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
-		if (bytes_sent <= 0) {
-			cout << "Error sending headers to client " << fd << endl;
+		if (bytes_sent < 0) {
+			cout << "Error sending headers to client on socket " << fd << endl;
 			_changeState(DONE);
 			return;
 		}
-		cout << "Sent " << chunk_to_send << " to client " << fd << endl;
-		_sent_headers = true;
-		cout << "Headers sent to client on socket " << fd << endl;
 		return;
 	}
 
-	size_t chunk_bytes = _response.getBodyChunk(chunk_to_send, _bytes_sent, _buffer_size);
-	if (chunk_bytes == 0) {
-		cout << "No more body to send to client on socket " << fd << endl;
-		_changeState(DONE);
-		return;
-	}
-	bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
-	_bytes_sent += bytes_sent;
-	cout << "Sent " << chunk_to_send << " to client " << fd << endl;
-	if (bytes_sent <= 0) {
-		cout << "Error sending to client " << fd << endl;
-		_changeState(DONE);
-		return;
-	}
-	else if (chunk_to_send.size() < _buffer_size || _bytes_sent >= _response.getBodySize())
-	{
-		cout << "Finshed sending response to client on socket " << fd << endl;
-		Logger::logResponse(_response.toString(), fd);
-		_changeState(DONE);
-		return;
+	if (_response_info.fd_to_send == -1) {
+		// Sending response body
+		chunk_size = _response.getBodyChunk(chunk_to_send, _response_info.bytes_sent, _buffer_size);
+		_response_info.bytes_sent += chunk_to_send.size();
+		if (chunk_size == 0) {
+			cout << "Finished sending response to client on socket " << fd << endl;
+			_changeState(DONE);
+			return;
+		}
+		if (chunk_size < 0) {
+			cout << "Error getting response chunk for client on socket " << fd << endl;
+			_changeState(DONE);
+			return;
+		}
+		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
+
+	} else {
+		// Sending a file
+		chunk_size = HttpUtils::chunkFile(_response_info.fd_to_send, _buffer_size, chunk_to_send);
+		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
+
+		if (bytes_sent < 0) {
+			cout << "Error sending file to client on socket " << fd << endl;
+			_changeState(DONE);
+			return;
+		}
+		if (chunk_size == 0) {
+			cout << "Finished sending file to client on socket " << fd << endl;
+			_changeState(DONE);
+			return;
+		}
 	}
 }
 
