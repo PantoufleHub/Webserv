@@ -11,6 +11,7 @@ struct EntryPoint {
 	string ip;
 	int port;
 	bool operator==(const EntryPoint& other) const;
+	EntryPoint& operator=(const EntryPoint& other);
 };
 
 bool EpInEps(const EntryPoint& ep, const vector<EntryPoint>& eps);

@@ -4,6 +4,14 @@ bool EntryPoint::operator==(const EntryPoint& other) const {
 	return (ip == "0.0.0.0" || other.ip == "0.0.0.0" || ip == other.ip) && port == other.port;
 }
 
+EntryPoint& EntryPoint::operator=(const EntryPoint& other) {
+	if (this != &other) {
+		ip = other.ip;
+		port = other.port;
+	}
+	return *this;
+}
+
 /// @brief Verifies if an Entry point is contained in a vector of Entry points
 /// @param ep Entry point to look for
 /// @param eps Vector of Entry points to look in
