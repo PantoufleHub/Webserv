@@ -45,5 +45,6 @@ class WebServer {
 	void removePollFd(int fd);
 
 	void run();
+	const vector<VirtualServer>& getVirtualServers() const;
 	void display() const;
 };

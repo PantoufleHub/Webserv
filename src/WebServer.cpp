@@ -171,6 +171,10 @@ void WebServer::run() {
 	}
 }
 
+const vector<VirtualServer>& WebServer::getVirtualServers() const {
+	return _virtual_servers;
+}
+
 void WebServer::display() const {
 	for (size_t i = 0; i < _virtual_servers.size(); i++) {
 		cout << "Server: " << _virtual_servers[i].getNames()[0] << " ; Root: " << _virtual_servers[i].getRoot() << endl;

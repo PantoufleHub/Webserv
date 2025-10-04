@@ -11,6 +11,7 @@ class HttpResponse : public AHttpMessage {
 	string _getStartLineFormatted() const;
 	// const string _getHttpStatusMessage(int status_code) const;
    public:
+	HttpResponse();
 	HttpResponse(int status_code);
 	const int& getStatusCode() const;
 
