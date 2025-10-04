@@ -431,6 +431,7 @@ void ClientHandler::_process() {
 	// pollfd& pfd = _server->getPollFd(fd);
 	const Location& matching_location = *_parsed_info.matching_location;
 
+	// redirection first
 	if (matching_location.getRedirect().size() > 0) {
 		cout << "Location has a redirect configured, redirecting to " << matching_location.getRedirect().begin()->second
 		     << endl;
@@ -442,6 +443,19 @@ void ClientHandler::_process() {
 	}
 
 	const string path = _request->getPath();
+
+	// script second
+	// disgusting code i know
+	if (path.size() >= 3 ) {
+		string extension = path.substr(path.size() - 3);
+		cout << "Found extension: " << extension << endl;
+		if (extension == PYTHON_EXTENSION || extension == SHELL_EXTENSION) {
+			_changeState(CGIING);
+			return;
+		}
+	}
+
+	// ya mum third oooh ahaha lol
 	const string method = _request->getMethod();
 	if (method == METHOD_GET) {
 		cout << "Handling GET request for path: " << path << endl;
