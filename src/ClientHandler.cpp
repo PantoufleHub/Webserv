@@ -550,7 +550,6 @@ void ClientHandler::_respond() {
 			_changeState(DONE);
 			return;
 		}
-		return;
 	}
 	if (fd_to_send == -1) {
 		// Sending response body
