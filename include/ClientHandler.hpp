@@ -39,6 +39,7 @@ typedef struct ParsedInfo {
 } ParsedInfo;
 
 typedef struct ResponseInfo {
+	string		content_type;
 	bool		sent_headers;
 	int 		fd_to_send; // For sending files
 	size_t		bytes_sent; // For body

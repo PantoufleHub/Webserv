@@ -9,6 +9,7 @@ void ClientHandler::_init_() {
 	_response_info.bytes_sent = 0;
 	_response_info.sent_headers = false;
 	_response_info.fd_to_send = -1;
+	_response_info.content_type = TYPE_HTML;
 
 	// Parsed info init
 	_parsed_info.virtual_servers = NULL;
@@ -34,6 +35,7 @@ ClientHandler::ClientHandler(Socket socket, WebServer* server) : _socket(socket)
 }
 
 ClientHandler::~ClientHandler() {
+	cout << "~CH Destructor" << endl;
 	cout << "Deleting CH for fd: " << _socket.getFd() << endl;
 	if (_request) {
 		cout << "Deleting request for fd: " << _socket.getFd() << endl;
@@ -41,45 +43,58 @@ ClientHandler::~ClientHandler() {
 	}
 	if (_response_info.fd_to_send != -1) {
 		cout << "Closing file descriptor to send: " << _response_info.fd_to_send << endl;
+		_server->removePollFd(_response_info.fd_to_send);
 		close(_response_info.fd_to_send);
+		_response_info.fd_to_send = -1;
+	}
+	if (_post_info.fd != -1) {
+		cout << "Closing post info fd " << _post_info.fd << endl;
+		_server->removePollFd(_post_info.fd);
+		close(_post_info.fd);
+		_post_info.fd = -1;
 	}
 }
 
 void ClientHandler::_changeState(ClientState newState) {
 	_state = newState;
 	int fd = _socket.getFd();
-	pollfd& pfd = _server->getPollFd(fd);
+	pollfd& client_pfd = _server->getPollFd(fd);
 	if (_state == READING) {
-		pfd.events = POLLIN;
+		client_pfd.events = POLLIN;
 	}
 	else if (_state == PARSING) {
-		pfd.events = 0;
+		client_pfd.events = 0;
 	}
 	else if (_state == PROCESSING) {
-		pfd.events = 0;
+		client_pfd.events = 0;
 	}
 	else if (_state == CGIING) {
-		pfd.events = 0;
+		client_pfd.events = 0;
 	}
 	else if (_state == ERRORING) {
-		pfd.events = 0;
-
+		client_pfd.events = 0;
 		// Reset response
 		_response.setBody("text/html", "");
 	}
 	else if (_state == RESPONDING) {
-		cout	<< "Preparing to respond to client on socket " << fd << "\n"
+		cout	<< "Changing state to responding for client on socket " << fd << "\n"
 				<< "Fd to send: " << _response_info.fd_to_send << endl;
-		pfd.events = POLLOUT;
+		client_pfd.events = POLLOUT;
+		_response.addHeader(HEADER_CONTENT_TYPE, _response_info.content_type);
 
-		// Set headers before sending
-		if (_response_info.fd_to_send == -1)
+		if (_response_info.fd_to_send == -1) {
 			_response.addHeader(HEADER_CONTENT_LENGTH, StringUtils::sizetToString(_response.getBodySize()));
-		else
+		}
+		else {
+			pollfd response_pfd;
+			response_pfd.events = POLLIN;
+			response_pfd.fd = _response_info.fd_to_send;
+			_server->addPollFd(response_pfd);
 			_response.addHeader(HEADER_TRANSFER_ENCODING, ENCODING_CHUNKED);
+		}
 	}
 	else if (_state == DONE) {
-		pfd.events = 0;
+		client_pfd.events = 0;
 	}
 }
 
@@ -352,6 +367,7 @@ void ClientHandler::_getResource() {
 		_changeState(ERRORING);
 		return;
 	}
+	cout << "Opened fd: " << _response_info.fd_to_send << endl;
 	_changeState(RESPONDING);
 }
 
@@ -383,7 +399,15 @@ void ClientHandler::_postResource() {
 			_changeState(ERRORING);
 			return;
 		}
+		pollfd new_pfd;
+		new_pfd.events = POLLOUT;
+		new_pfd.fd = _post_info.fd;
+		_server->addPollFd(new_pfd);
 	} else {
+		if (!WebUtils::canWrite(_server->getPollFd(_post_info.fd))) {
+			cout << "Unable to  write to fd " << _post_info.fd << endl;
+			return;
+		}
 		static size_t pos = 0;
 		ssize_t bytes_read;
 	
@@ -393,7 +417,6 @@ void ClientHandler::_postResource() {
 		}
 		else if (bytes_read == 0) {
 			cout << "Finished posting" << endl;
-			close(_post_info.fd);
 			_response.setStatusCode(HTTP_CODE_CREATED);
 			_changeState(RESPONDING);
 			return;
@@ -489,6 +512,8 @@ void ClientHandler::_error() {
 	// HANDLE ERRORS
 	int fd = _socket.getFd();
 	cout << "Handling Error for request from client on socket " << fd << endl;
+
+	// NEED TO UPDATE SO THAT THERES A CORRESPONDING POLLFD INN WEBSERVER
 	HttpUtils::getErrorPage(_response, *_parsed_info.matching_location, _response.getStatusCode());
 
 	_changeState(RESPONDING);
@@ -496,15 +521,15 @@ void ClientHandler::_error() {
 
 void ClientHandler::_respond() {
 	int fd = _socket.getFd();
-	pollfd& pfd = _server->getPollFd(fd);
-	
+	int fd_to_send = _response_info.fd_to_send;
+	pollfd& pfd = _server->getPollFd(fd); // ERROR HERE
+
 	if (!WebUtils::canWrite(pfd))
 		return;
-	
+
 	string chunk_to_send;
 	ssize_t chunk_size;
 	ssize_t bytes_sent;
-	
 	if (!_response_info.sent_headers) {
 		chunk_to_send = _response.getHeadersString();
 		_response_info.sent_headers = true;
@@ -518,8 +543,7 @@ void ClientHandler::_respond() {
 		}
 		return;
 	}
-
-	if (_response_info.fd_to_send == -1) {
+	if (fd_to_send == -1) {
 		// Sending response body
 		chunk_size = _response.getBodyChunk(chunk_to_send, _response_info.bytes_sent, _buffer_size);
 		_response_info.bytes_sent += chunk_to_send.size();
@@ -536,8 +560,12 @@ void ClientHandler::_respond() {
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
 
 	} else {
+		if (!WebUtils::canRead(_server->getPollFd(fd_to_send))) {
+			cout << "Not able to read from fd " << fd_to_send << endl;
+			return;
+		}
 		// Sending a file
-		chunk_size = HttpUtils::chunkFile(_response_info.fd_to_send, _buffer_size, chunk_to_send);
+		chunk_size = HttpUtils::chunkFile(fd_to_send, _buffer_size, chunk_to_send);
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
 
 		if (bytes_sent < 0) {

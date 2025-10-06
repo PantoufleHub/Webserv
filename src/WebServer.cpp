@@ -17,6 +17,10 @@ WebServer::~WebServer() {
 	}
 }
 
+void WebServer::addPollFd(pollfd pfd) {
+	_pollfds.push_back(pfd);
+}
+
 pollfd& WebServer::getPollFd(int fd) {
 	for (size_t i = 0; i < _pollfds.size(); i++) {
 		if (_pollfds[i].fd == fd) {

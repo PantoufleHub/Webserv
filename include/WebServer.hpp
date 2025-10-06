@@ -41,6 +41,7 @@ class WebServer {
 	WebServer(const string& config_file);
 	~WebServer();
 
+	void addPollFd(pollfd pfd);
 	pollfd& getPollFd(int fd);
 	void removePollFd(int fd);
 
