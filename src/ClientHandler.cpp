@@ -513,7 +513,6 @@ void ClientHandler::_error() {
 	int fd = _socket.getFd();
 	cout << "Handling Error for request from client on socket " << fd << endl;
 
-	// NEED TO UPDATE SO THAT THERES A CORRESPONDING POLLFD INN WEBSERVER
 	HttpUtils::getErrorPage(_response, *_parsed_info.matching_location, _response.getStatusCode());
 
 	_changeState(RESPONDING);
