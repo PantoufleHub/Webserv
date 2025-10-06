@@ -156,17 +156,19 @@ void WebServer::_garbageCollectClients() {
 		}
 	}
 
-	cout	<< "-Garbage collection done:\n"
-			<< " " << _clients.size() << " clients remaining" << "\n"
-			<< " " << _pollfds.size() << " pollfds remaining\n" << endl;
+	// cout	<< "-Garbage collection done:\n"
+	// 		<< " " << _clients.size() << " clients remaining" << "\n"
+	// 		<< " " << _pollfds.size() << " pollfds remaining\n" << endl;
 }
 
 void WebServer::run() {
 	_openAllServerSockets();
-	int poll_timeout = 2500;
+	int poll_timeout = POLL_TIMEOUT;
+	int poll_result;
 
 	while (1) {
-		cout << "-- POLL: " << poll (&_pollfds[0], _pollfds.size(), poll_timeout) << " pollfds updated --" << endl;
+		poll_result = poll (&_pollfds[0], _pollfds.size(), poll_timeout);
+		// cout << "-- POLL: " << poll_result << " pollfds updated --" << endl;
 
 		_updateListeningSockets();
 		_updateClientSockets();
