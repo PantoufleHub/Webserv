@@ -2,6 +2,7 @@
 
 #include <string>
 #include <iostream>
+#include <wait.h>
 
 #include "EntryPoint.hpp"
 #include "Socket.hpp"

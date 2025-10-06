@@ -74,7 +74,7 @@ void ClientHandler::_changeState(ClientState newState) {
 	else if (_state == ERRORING) {
 		client_pfd.events = 0;
 		// Reset response
-		_response.setBody("text/html", "");
+		_response.setBody(TYPE_HTML, "");
 	}
 	else if (_state == RESPONDING) {
 		cout	<< "Changing state to responding for client on socket " << fd << "\n"
@@ -504,6 +504,16 @@ void ClientHandler::_cgi() {
 	int fd = _socket.getFd();
 
 	cout << "Handling CGI for request from client on socket " << fd << endl;
+	pid_t pid = fork();
+	if (pid == 0) {
+		extern char **environ;
+		string path = (string("www/cgi-bin") + _request->getPath());
+		char* const argv[] = { const_cast<char*>(path.c_str()), NULL };
+		cout << "execveing path: " << path << endl;
+		execve(path.c_str(), argv, environ);
+	}
+	else
+		waitpid(pid, NULL, 0);
 
 	_changeState(RESPONDING);
 }
