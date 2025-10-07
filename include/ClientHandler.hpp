@@ -14,19 +14,20 @@
 #include "Constants.hpp"
 #include "Macros.hpp"
 #include "HttpResponse.hpp"
+#include "CgiHandler.hpp"
 
 using namespace std;
 
 class WebServer;
 
 enum ClientState {
-	READING, // Waiting for request
-	PARSING, // Extracting info
-	PROCESSING,  // Executing request
-	CGIING, // Waiting for CGI
-	ERRORING, // Generating error response
-	RESPONDING, // Sending response
-	DONE, // Ready to close
+	CLIENT_READING, // Waiting for request
+	CLIENT_PARSING, // Extracting info
+	CLIENT_PROCESSING,  // Executing request
+	CLIENT_CGIING, // Waiting for CGI
+	CLIENT_ERRORING, // Generating error response
+	CLIENT_RESPONDING, // Sending response
+	CLIENT_DONE, // Ready to close
 };
 
 typedef struct ParsedInfo {
@@ -51,6 +52,10 @@ typedef struct PostInfo{
 	int		fd;
 } PostInfo;
 
+typedef struct CgiInfo {
+	CgiHandler		*CgiHandler;
+} CgiInfo;
+
 class ClientHandler {
    private:
 	size_t			_buffer_size;
@@ -63,6 +68,7 @@ class ClientHandler {
 	ResponseInfo	_response_info;
 	ParsedInfo		_parsed_info;
 	PostInfo		_post_info;
+	CgiInfo			_cgi_info;
 
 	void _checkRequestBuffer();
 	void _changeState(ClientState newState);

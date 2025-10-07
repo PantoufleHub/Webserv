@@ -141,7 +141,7 @@ void WebServer::_garbageCollectClients() {
 	while (client_it != _clients.end()) {
 		ClientHandler& client = *client_it->second;
 
-		if (client.getState() == DONE) {
+		if (client.getState() == CLIENT_DONE) {
 			int client_fd = client_it->first;
 			cout << "Cleaning up client on socket: " << client_fd << endl;
 			close(client_fd);
