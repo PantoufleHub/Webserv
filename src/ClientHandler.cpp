@@ -24,7 +24,7 @@ void ClientHandler::_init_() {
 	_post_info.parsed = false;
 
 	// CGI info init
-	_cgi_info.CgiHandler = NULL;
+	_cgi_info.cgi_handler = NULL;
 }
 
 ClientHandler::ClientHandler() {}
@@ -56,9 +56,9 @@ ClientHandler::~ClientHandler() {
 		close(_post_info.fd);
 		_post_info.fd = -1;
 	}
-	if (_cgi_info.CgiHandler){
+	if (_cgi_info.cgi_handler){
 		cout << "Deleting CgiHandler" << endl;
-		delete _cgi_info.CgiHandler;
+		delete _cgi_info.cgi_handler;
 	}
 }
 
@@ -496,27 +496,32 @@ void ClientHandler::_process() {
 void ClientHandler::_cgi() {
 	int fd = _socket.getFd();
 
-	if (!_cgi_info.CgiHandler) {
+	if (!_cgi_info.cgi_handler) {
 		cout << "Creating new CgiHandler for socket " << fd << endl;
-		_cgi_info.CgiHandler = new CgiHandler();
-		if (!_cgi_info.CgiHandler) {
+		// BLEGH
+		_cgi_info.cgi_handler = new CgiHandler(	_response,
+												*_request,
+												*_server,
+												*_parsed_info.matching_server,
+												_socket);
+		if (!_cgi_info.cgi_handler) {
 			cout << "Error creating cgiHandler" << endl;
 			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 			return;
 		}
 	}
 
-	if (_cgi_info.CgiHandler->getState() == CGI_ERROR) {
-		_changeState(CLIENT_ERRORING, _cgi_info.CgiHandler->getErrorCode());
+	if (_cgi_info.cgi_handler->getState() == CGI_ERROR) {
+		_changeState(CLIENT_ERRORING, _cgi_info.cgi_handler->getErrorCode());
 		return;
 	}
 
-	if (_cgi_info.CgiHandler->getState() == CGI_PROCESSING) {
-		_cgi_info.CgiHandler->update();
+	if (_cgi_info.cgi_handler->getState() == CGI_PROCESSING) {
+		_cgi_info.cgi_handler->update();
 		return;
 	}
 
-	if (_cgi_info.CgiHandler->getState() == CGI_FINISHED) {
+	if (_cgi_info.cgi_handler->getState() == CGI_FINISHED) {
 		_changeState(CLIENT_RESPONDING);
 		return;
 	}
