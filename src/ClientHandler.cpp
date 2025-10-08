@@ -62,6 +62,8 @@ ClientHandler::~ClientHandler() {
 	}
 }
 
+/// @param statusCode Used with CLIENT_ERRORING. Set to 0 for default
+/// @param newState Client state. Refer to the CLIENT_ constants.
 void ClientHandler::_changeState(const int statusCode, ClientState newState) {
 	_state = newState;
 	int fd = _socket.getFd();
