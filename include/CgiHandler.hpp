@@ -30,6 +30,9 @@ class CgiHandler{
 	const VirtualServer	&_client_server;
 	const Socket		&_client_socket;
 
+	void _parseInfo();
+	void _changeState(CgiState state, int error_code);
+
    public:
 	void _init_();
 	// BLEEEEUHGGHGAAAHDKHLAJK
@@ -40,7 +43,7 @@ class CgiHandler{
 				const Socket		&client_socket);
 
 	void update();
-	void parseInfo();
+
 
 	const CgiState &getState() const;
 	const int &getErrorCode() const;
