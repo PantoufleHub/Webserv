@@ -3,7 +3,7 @@
 // TEMP HEADERS
 #include <cstdlib>
 #include <unistd.h>
-#include <wait.h>
+#include <sys/wait.h>
 
 CgiHandler::CgiHandler() {
 	_state = CGI_PROCESSING;

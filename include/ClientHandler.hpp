@@ -2,7 +2,7 @@
 
 #include <string>
 #include <iostream>
-#include <wait.h>
+#include <sys/wait.h>
 
 #include "EntryPoint.hpp"
 #include "Socket.hpp"
@@ -71,7 +71,7 @@ class ClientHandler {
 	CgiInfo			_cgi_info;
 
 	void _checkRequestBuffer();
-	void _changeState(ClientState newState);
+	void _changeState(const int stateCode, ClientState newState);
    public:
 	void _init_();
 	// For map

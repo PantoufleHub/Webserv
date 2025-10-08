@@ -168,6 +168,7 @@ void WebServer::run() {
 
 	while (1) {
 		poll_result = poll (&_pollfds[0], _pollfds.size(), poll_timeout);
+		(void)poll_result; // return value actually needed?
 		// cout << "-- POLL: " << poll_result << " pollfds updated --" << endl;
 
 		_updateListeningSockets();
