@@ -62,6 +62,9 @@ ClientHandler::~ClientHandler() {
 	}
 }
 
+/// @brief Change the state of the ClientHandler
+/// @param newState The state to change to
+/// @param statusCode The response status code to change to (optional)
 void ClientHandler::_changeState(ClientState newState, const int statusCode = 0) {
 	_state = newState;
 	int fd = _socket.getFd();
