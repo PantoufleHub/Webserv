@@ -19,6 +19,7 @@ const string HEADER_CONNECTION = "Connection";
 const string HEADER_HOST = "Host";
 const string HEADER_ACCEPT = "Accept";
 const string HEADER_TRANSFER_ENCODING = "Transfer-Encoding";
+const string HEADER_LOCATION = "Location";
 
 const string TYPE_HTML = "text/html";
 const string TYPE_PLAIN = "text/plain";

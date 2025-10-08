@@ -62,7 +62,7 @@ ClientHandler::~ClientHandler() {
 	}
 }
 
-void ClientHandler::_changeState(const int statusCode, ClientState newState) {
+void ClientHandler::_changeState(ClientState newState, const int statusCode = 0) {
 	_state = newState;
 	int fd = _socket.getFd();
 	pollfd& client_pfd = _server->getPollFd(fd);
@@ -116,16 +116,16 @@ void ClientHandler::_checkRequestBuffer() {
 	if (request_length > 0) {
 		cout << "Full request received on socket " << _socket.getFd() << endl;
 		_request = HttpRequestParser::strToHttpRequest(_request_buffer.substr(0, request_length));
-		_changeState(0, CLIENT_PARSING);
+		_changeState(CLIENT_PARSING);
 		Logger::logRequest(_request->toString(), _socket.getFd());
 	} else if (request_length < 0) {
 		cout << "Bad request on socket " << _socket.getFd() << endl;
-		_changeState(0, CLIENT_DONE); // Send error response?
+		_changeState(CLIENT_DONE); // Send error response?
 	} else {
 		// Incomplete request, keep reading
 		if (_request_buffer.size() > MAX_REQUEST_SIZE) {
 			cout << "Request too large on socket " << _socket.getFd() << endl;
-			_changeState(0, CLIENT_DONE); // Send error response?
+			_changeState(CLIENT_DONE); // Send error response?
 		}
 	}
 }
@@ -142,11 +142,11 @@ void ClientHandler::_read() {
 
 	if (bytes_received < 0) {
 		cout << "Error reading from client " << fd << endl;
-		_changeState(0, CLIENT_DONE);
+		_changeState(CLIENT_DONE);
 
 	} else if (bytes_received == 0) {
 		cout << "Client on socket " << fd << " disconnected" << endl;
-		_changeState(0, CLIENT_DONE);
+		_changeState(CLIENT_DONE);
 		
 	} else {
 		string data_read(buffer, bytes_received);
@@ -162,18 +162,18 @@ void ClientHandler::_validateFirstLine() {
 	const string http_version = _request->getHttpVersion();
 
 	if (method != METHOD_GET && method != METHOD_POST && method != METHOD_DELETE) {
-		_changeState(HTTP_CODE_METHOD_NOT_ALLOWED, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_METHOD_NOT_ALLOWED);
 		return;
 	}
 
 	// Prevent directory traversal attacks
 	if (path.find("..") != string::npos || path.find("~") != string::npos) {
-		_changeState(HTTP_CODE_BAD_REQUEST, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_BAD_REQUEST);
 		return;
 	}
 
 	if (http_version != "HTTP/1.1") {
-		_changeState(HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED);
 		return;
 	}
 }
@@ -246,7 +246,7 @@ void ClientHandler::_validateMatchingLocation() {
 	
 	if (!matching_location.checkMethod(method)) {
 		cout << "Method '" << method << "' not allowed, setting 405" << endl;
-		_changeState(HTTP_CODE_METHOD_NOT_ALLOWED, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_METHOD_NOT_ALLOWED);
 		return;
 	}
 	cout << "Best match for path '" << _request->getPath() << "' is location: " << matching_location.getNames()[0] << endl;
@@ -270,7 +270,7 @@ void ClientHandler::_parse() {
 		return;
 	
 	if (!_parsed_info.matching_server) {
-		_changeState(HTTP_CODE_INTERNAL_SERVER_ERROR, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 		return;
 	}
 	_parsed_info.errors = &_parsed_info.matching_server->getErrors();
@@ -281,13 +281,13 @@ void ClientHandler::_parse() {
 
 	_parsed_info.locations = &_parsed_info.matching_server->getLocations();
 	if (_parsed_info.locations->empty()) {
-		_changeState(HTTP_CODE_NOT_FOUND, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_NOT_FOUND);
 		return;
 	}
 
 	_findMatchingLocation();
 	if (_parsed_info.matching_location == NULL) {
-		_changeState(HTTP_CODE_NOT_FOUND, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_NOT_FOUND);
 		return;
 	}
 
@@ -295,7 +295,7 @@ void ClientHandler::_parse() {
 	if (_state != CLIENT_PARSING)
 		return;
 
-	_changeState(0, CLIENT_PROCESSING);
+	_changeState(CLIENT_PROCESSING);
 }
 
 void ClientHandler::_getResourceDirectory() {
@@ -306,7 +306,7 @@ void ClientHandler::_getResourceDirectory() {
 	if (auto_index) {
 		cout << "Autoindex is enabled, generating page" << endl;
 		HttpUtils::getAutoIndexPage(_response, location, path);
-		_changeState(0, CLIENT_RESPONDING);
+		_changeState(CLIENT_RESPONDING);
 		return;
 	} else {
 		cout << "Autoindex is disabled, searching for index files..." << endl;
@@ -320,10 +320,10 @@ void ClientHandler::_getResourceDirectory() {
 				_response_info.fd_to_send = open(test_path.c_str(), O_RDONLY);
 				if (_response_info.fd_to_send < 0) {
 					cerr << "Error opening file descriptor for: " << test_path << endl;
-					_changeState(HTTP_CODE_FORBIDDEN, CLIENT_ERRORING);
+					_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 					return;
 				}
-				_changeState(0, CLIENT_RESPONDING);
+				_changeState(CLIENT_RESPONDING);
 				file.close();
 				return;
 			}
@@ -331,7 +331,7 @@ void ClientHandler::_getResourceDirectory() {
 	}
 
 	cout << "No index file found" << endl;
-	_changeState(HTTP_CODE_FORBIDDEN, CLIENT_ERRORING);
+	_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 }
 
 void ClientHandler::_getResource() {
@@ -343,7 +343,7 @@ void ClientHandler::_getResource() {
 	if (!fileExists)
 	{
 		cout << "File does not exist or can't be accessed: " << path << endl;
-		_changeState(HTTP_CODE_NOT_FOUND, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_NOT_FOUND);
 		return;
 	}
 
@@ -357,44 +357,44 @@ void ClientHandler::_getResource() {
 	bool isDir = S_ISDIR(info.st_mode);
 	if (isDir) {
 		cerr << "Found directory not a file" << endl;
-		_changeState(HTTP_CODE_NOT_FOUND, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_NOT_FOUND);
 		return;
 	}
 
 	_response_info.fd_to_send = open(path.c_str(), O_RDONLY);
 	if (_response_info.fd_to_send < 0) {
 		cerr << "Error opening file descriptor for: " << path << endl;
-		_changeState(HTTP_CODE_FORBIDDEN, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 		return;
 	}
 	cout << "Opened fd: " << _response_info.fd_to_send << endl;
-	_changeState(0, CLIENT_RESPONDING);
+	_changeState(CLIENT_RESPONDING);
 }
 
 void ClientHandler::_postResource() {
 	const string& body = _request->getBody();
 	
-	// NEEDS TO BE FIXED
+	// NEEDS TO BE FIXED?
 	if (!_post_info.parsed) {
 		_post_info.parsed = true;
 		const string& root = _parsed_info.matching_server->getRoot();
 		const string& path = root.substr(0, root.size()-1) + _request->getPath();
 		cout << "Posting resource to path: " << path << " with content: " << _request->getBody() << endl;
-		string name = path; // Should not be the direct path!
+		string name = path; // Should not be the direct path! Do we care tho?
 
 		struct stat statbuf;
 		int stat_res = stat(name.c_str(), &statbuf);
 
 		if (stat_res == 0) {
 			cout << "File already exists" << endl;
-			_changeState(HTTP_CODE_CONFLICT, CLIENT_ERRORING);
+			_changeState(CLIENT_ERRORING, HTTP_CODE_CONFLICT);
 			return;
 		}
 
 		_post_info.fd = open(name.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
 		if (_post_info.fd < 0) {
 			cout << "Error opening fd" << endl; 
-			_changeState(HTTP_CODE_INTERNAL_SERVER_ERROR, CLIENT_ERRORING);
+			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 			return;
 		}
 		pollfd new_pfd;
@@ -415,11 +415,11 @@ void ClientHandler::_postResource() {
 		}
 		else if (bytes_read == 0) {
 			cout << "Finished posting" << endl;
-			_changeState(HTTP_CODE_CREATED, CLIENT_RESPONDING);
+			_changeState(CLIENT_RESPONDING, HTTP_CODE_CREATED);
 			return;
 		}
 		else if (bytes_read < 0) {
-			_changeState(HTTP_CODE_INTERNAL_SERVER_ERROR, CLIENT_ERRORING);
+			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 			cout << "Error writing to file" << endl;
 			return;
 		}
@@ -433,12 +433,12 @@ void ClientHandler::_deleteResource() {
 
 	if (remove(path.c_str()) != 0) {
 		cerr << "Error deleting file: " << path << endl;
-		_changeState(HTTP_CODE_FORBIDDEN, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 		return;
 	}
 
 	// resend page TOoO ANNAOYING?
-	_changeState(HTTP_CODE_NO_CONTENT, CLIENT_RESPONDING);
+	_changeState(CLIENT_RESPONDING, HTTP_CODE_NO_CONTENT);
 	return; // useless? yes but whatever, i grew attached to it
 }
 
@@ -450,12 +450,10 @@ void ClientHandler::_process() {
 
 	// redirection first
 	if (matching_location.getRedirect().size() > 0) {
-		cout << "Location has a redirect configured, redirecting to " << matching_location.getRedirect().begin()->second
-		     << endl;
-		_response.setStatusCode(matching_location.getRedirect().begin()->first);
-		_response.addHeader("Location", matching_location.getRedirect().begin()->second);
-		cout << "Redirecting to " << matching_location.getRedirect().begin()->second << endl;
-		_changeState(0, CLIENT_RESPONDING); // No generation needed
+		cout	<< "Location has a redirect configured, redirecting to "
+				<< matching_location.getRedirect().begin()->second << endl;
+		_response.addHeader(HEADER_LOCATION, matching_location.getRedirect().begin()->second);
+		_changeState(CLIENT_RESPONDING, matching_location.getRedirect().begin()->first); // No generation needed
 		return;
 	}
 
@@ -467,7 +465,7 @@ void ClientHandler::_process() {
 		string extension = path.substr(path.size() - 3);
 		cout << "Found extension: " << extension << endl;
 		if (extension == PYTHON_EXTENSION || extension == SHELL_EXTENSION) {
-			_changeState(0, CLIENT_CGIING);
+			_changeState(CLIENT_CGIING);
 			return;
 		}
 	}
@@ -487,7 +485,7 @@ void ClientHandler::_process() {
 		_deleteResource();
 
 	} else {
-		_changeState(HTTP_CODE_METHOD_NOT_ALLOWED, CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, HTTP_CODE_METHOD_NOT_ALLOWED);
 		return;
 	}
 }
@@ -500,13 +498,13 @@ void ClientHandler::_cgi() {
 		_cgi_info.CgiHandler = new CgiHandler();
 		if (!_cgi_info.CgiHandler) {
 			cout << "Error creating cgiHandler" << endl;
-			_changeState(HTTP_CODE_INTERNAL_SERVER_ERROR, CLIENT_ERRORING);
+			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 			return;
 		}
 	}
 
 	if (_cgi_info.CgiHandler->getState() == CGI_ERROR) {
-		_changeState(_cgi_info.CgiHandler->getErrorCode(), CLIENT_ERRORING);
+		_changeState(CLIENT_ERRORING, _cgi_info.CgiHandler->getErrorCode());
 		return;
 	}
 
@@ -516,7 +514,7 @@ void ClientHandler::_cgi() {
 	}
 
 	if (_cgi_info.CgiHandler->getState() == CGI_FINISHED) {
-		_changeState(0, CLIENT_RESPONDING);
+		_changeState(CLIENT_RESPONDING);
 		return;
 	}
 
@@ -530,7 +528,7 @@ void ClientHandler::_error() {
 
 	HttpUtils::getErrorPage(_response, *_parsed_info.matching_location, _response.getStatusCode());
 
-	_changeState(0, CLIENT_RESPONDING);
+	_changeState(CLIENT_RESPONDING);
 }
 
 void ClientHandler::_respond() {
@@ -552,7 +550,7 @@ void ClientHandler::_respond() {
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
 		if (bytes_sent < 0) {
 			cout << "Error sending headers to client on socket " << fd << endl;
-			_changeState(0, CLIENT_DONE);
+			_changeState(CLIENT_DONE);
 			return;
 		}
 	}
@@ -562,12 +560,12 @@ void ClientHandler::_respond() {
 		_response_info.bytes_sent += chunk_to_send.size();
 		if (chunk_size == 0) {
 			cout << "Finished sending response to client on socket " << fd << endl;
-			_changeState(0, CLIENT_DONE);
+			_changeState(CLIENT_DONE);
 			return;
 		}
 		if (chunk_size < 0) {
 			cout << "Error getting response chunk for client on socket " << fd << endl;
-			_changeState(0, CLIENT_DONE);
+			_changeState(CLIENT_DONE);
 			return;
 		}
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
@@ -583,12 +581,12 @@ void ClientHandler::_respond() {
 
 		if (bytes_sent < 0) {
 			cout << "Error sending file to client on socket " << fd << endl;
-			_changeState(0, CLIENT_DONE);
+			_changeState(CLIENT_DONE);
 			return;
 		}
 		if (chunk_size == 0) {
 			cout << "Finished sending file to client on socket " << fd << endl;
-			_changeState(0, CLIENT_DONE);
+			_changeState(CLIENT_DONE);
 			return;
 		}
 	}

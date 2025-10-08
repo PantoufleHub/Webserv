@@ -71,7 +71,7 @@ class ClientHandler {
 	CgiInfo			_cgi_info;
 
 	void _checkRequestBuffer();
-	void _changeState(const int stateCode, ClientState newState);
+	void _changeState(ClientState newState, const int stateCode);
    public:
 	void _init_();
 	// For map
