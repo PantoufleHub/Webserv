@@ -5,6 +5,8 @@
 
 using namespace std;
 
+#define SERVER_SOFTWARE "PLAP/1.0"
+
 #define DEFAULT_SOCKET_BACKLOG 1024
 #define DEFAULT_BUFFER_SIZE 1024
 #define POLL_TIMEOUT 0

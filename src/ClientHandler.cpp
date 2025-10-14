@@ -501,7 +501,6 @@ void ClientHandler::_cgi() {
 		// BLEGH
 		_cgi_info.cgi_handler = new CgiHandler(	_response,
 												*_request,
-												*_server,
 												*_parsed_info.matching_server,
 												_socket);
 		if (!_cgi_info.cgi_handler) {

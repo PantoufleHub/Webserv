@@ -17,6 +17,26 @@ typedef enum CgiState {
 	CGI_ERROR,
 } CgiState;
 
+typedef struct CgiEnvironment {
+	string env_auth_type;
+    string env_content_length;
+    string env_content_type;
+    string env_gateway_interface;
+    string env_path_info;
+    string env_path_translated;
+    string env_query_string;
+    string env_remote_addr;
+    string env_remote_host;
+    string env_remote_ident;
+    string env_remote_user;
+    string env_request_method;
+    string env_script_name;
+    string env_server_name;
+    string env_server_port;
+    string env_server_protocol;
+    string env_server_software;
+} CgiEnvironment;
+
 class CgiHandler{
    private:
 	CgiState			_state;
@@ -26,19 +46,18 @@ class CgiHandler{
 	int					_error_code;
 	const HttpResponse	&_response;
 	const HttpRequest	&_request;
-	const WebServer		&_web_server;
 	const VirtualServer	&_client_server;
 	const Socket		&_client_socket;
+	CgiEnvironment		_cgi_environment;
 
 	void _parseInfo();
 	void _changeState(CgiState state, int error_code);
 
    public:
 	void _init_();
-	// BLEEEEUHGGHGAAAHDKHLAJK
+	
 	CgiHandler(	const HttpResponse	&response,
 				const HttpRequest	&request,
-				const WebServer		&web_server,
 				const VirtualServer	&client_server,
 				const Socket		&client_socket);
 
