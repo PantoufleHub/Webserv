@@ -204,7 +204,7 @@ void WebServer::display() const {
 		}
 		for (size_t i = 0; i < locations.size(); i++) {
 			cout << "\nLocations" << "[" << i << "]: " << flush;
-			map<string, vector<string> > cgi = locations[i].getCgi();
+			string cgi = locations[i].getCgi();
 			map<int, string> redirect = locations[i].getRedirect();
 			if (cgi.empty()) {
 				cout << locations[i].getNames()[0] << "\nRoot: " << locations[i].getRoot()
@@ -218,14 +218,9 @@ void WebServer::display() const {
 					cout << locations[i].getAllowedMethods()[it] << endl;
 			} else {
 				cout << "Cgi: " << locations[i].getNames()[0] << endl;
-				for (map<string, vector<string> >::iterator itCgi = cgi.begin(); itCgi != cgi.end(); itCgi++) {
-					cout << "Key: " << itCgi->first << " Values: " << flush;
-					for (size_t i = 0; i < itCgi->second.size(); i++)
-						cout << itCgi->second[i] << "; " << flush;
-					cout << endl;
+				cout << "Key: " << cgi << endl;
 				}
 			}
-		}
 		cout << "\nEntryPoints:\n" << flush;
 		for (size_t i = 0; i < eP.size(); i++) {
 			cout << "EntryPoint " << i << ":\nPort: " << eP[i].port << " IP: " << eP[i].ip << endl;
