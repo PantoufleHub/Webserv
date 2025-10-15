@@ -12,7 +12,7 @@
 #include "StringUtils.hpp"
 #include "VirtualServer.hpp"
 
-ABlockDirective::ABlockDirective() : _autoindex(false) {}
+ABlockDirective::ABlockDirective() : _client_max_body_size(MAX_REQUEST_LENGTH), _autoindex(false) {}
 
 ABlockDirective::~ABlockDirective() {}
 
@@ -73,8 +73,6 @@ void ABlockDirective::setBlockDirective(std::vector<std::string>::iterator& it) 
 		}
 		++it;
 		SetDirectives(dirIt->second, it, *this);
-		if (!this->getClientMaxBodySize())
-			this->setClientMaxBodySize();
 	}
 }
 
@@ -166,12 +164,14 @@ void ABlockDirective::setErrors(std::vector<std::string>::iterator& it) {
 
 void ABlockDirective::setClientMaxBodySize(std::vector<std::string>::iterator& it) {
 	char*	cerror;
-	size_t maxBodySize = std::strtol(it->c_str(), &cerror, 10);
+	size_t	maxBodySize = std::strtol(it->c_str(), &cerror, 10);
 	string	error = cerror;
+
 	if (!maxBodySize || !error.empty()) {
 		const std::string error = "Client max body size must be an integer (size_t) value '" + *it + "' Too large or bad format";
 		throw ConfigParser::ParsingException(error.c_str());
 	}
+	_client_max_body_size = maxBodySize;
 	++it;
 }
 
