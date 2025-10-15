@@ -49,9 +49,7 @@ const size_t REQUEST_EOF = 4; // \r\n\r\n length
 
 // Server limits
 const size_t CONTENT_LENGTH_SIZE = 16;
-const size_t MAX_REQUEST_HEADERS = 8192;
-const size_t MAX_REQUEST_BODY = 1048576;
-const size_t MAX_REQUEST_SIZE = MAX_REQUEST_HEADERS + MAX_REQUEST_BODY;
+const size_t MAX_REQUEST_LENGTH = 1048576;
 
 // Config file constants
 static const std::string DEFAULT_UPLOAD_STORE = "/misc/var/uploads/";

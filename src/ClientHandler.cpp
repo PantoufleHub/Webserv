@@ -123,16 +123,16 @@ void ClientHandler::_checkRequestBuffer() {
 		Logger::logRequest(_request->toString(), _socket.getFd());
 	} else if (request_length < 0) {
 		cout << "Bad request on socket " << _socket.getFd() << endl;
-		_changeState(CLIENT_DONE); // Send error response?
+		_changeState(CLIENT_DONE, HTTP_CODE_BAD_REQUEST); // Send error response? PL: BadRequest? Erroring?
 	} else {
 		// Incomplete request, keep reading
-		if (_request_buffer.size() > MAX_REQUEST_SIZE) {
+		if (_request_buffer.size() > this->_parsed_info.matching_server->getClientMaxBodySize()) {
 			cout << "Request too large on socket " << _socket.getFd() << endl;
-			_changeState(CLIENT_DONE); // Send error response?
+			_changeState(CLIENT_DONE, HTTP_CODE_PAYLOAD_TOO_LARGE); // Send error response? PL: Payload too large? Erroring?
 		}
 	}
 }
-
+//MAX_B_S = max(vs[])
 void ClientHandler::_read() {
 	int fd = _socket.getFd();
 	pollfd& pfd = _server->getPollFd(fd);
@@ -145,7 +145,7 @@ void ClientHandler::_read() {
 
 	if (bytes_received < 0) {
 		cout << "Error reading from client " << fd << endl;
-		_changeState(CLIENT_DONE);
+		_changeState(CLIENT_DONE); //error
 
 	} else if (bytes_received == 0) {
 		cout << "Client on socket " << fd << " disconnected" << endl;
@@ -155,6 +155,8 @@ void ClientHandler::_read() {
 		string data_read(buffer, bytes_received);
 		cout << "Received " << bytes_received << " bytes from client " << fd << endl;
 		_request_buffer += data_read;
+		if (_request_buffer.size() > MAX_REQUEST_LENGTH)
+			_changeState(CLIENT_ERRORING, HTTP_CODE_PAYLOAD_TOO_LARGE);
 		_checkRequestBuffer();
 	}
 }

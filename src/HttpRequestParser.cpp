@@ -132,10 +132,13 @@ static int getContentLength(const string& dataIn) {
 }
 
 int HttpRequestParser::checkDataIn(const string& _data_in) {
+	// bool	isChunked = false;
 	size_t request_end = _data_in.find("\r\n\r\n");
 	if (request_end == string::npos) {
 		return 0;
 	}
+	// else if (_data_in.find("transfer-encoding: chunked", _data_in.at(0), request_end))
+		// isChunked = true;
 
 	size_t first_line_end = _data_in.find("\r\n");
 	string first_line = _data_in.substr(0, first_line_end);
@@ -171,7 +174,7 @@ int HttpRequestParser::checkDataIn(const string& _data_in) {
 			return static_cast<int>(request_end + REQUEST_EOF);
 		size_t total_length = request_end + REQUEST_EOF + content_length;
 		if (_data_in.length() >= total_length) {
-			return static_cast<int>(total_length);
+			return static_cast<int>(total_length); // all good raoul
 		}
 		return 0;
 	}
