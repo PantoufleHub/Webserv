@@ -9,6 +9,7 @@ void CgiHandler::_init_() {
 	_state = CGI_PROCESSING;
 	_error_code = 0;
 	_created_child = false;
+	_child_pid = -1;
 }
 
 CgiHandler::CgiHandler(	const HttpResponse	&response,
@@ -94,6 +95,26 @@ void CgiHandler::_parseInfo() {
 }
 
 void CgiHandler::_createChildProcess() {
+	string full_path = _cgi_environment.exec_path;
+	cout << "Creating child process for execution of path: " << full_path << endl;
+	struct stat sb;
+	if (access(full_path.c_str(), F_OK) != 0) {
+		cout << "File does not exist!" << endl;
+		_changeState(CGI_ERROR, HTTP_CODE_NOT_FOUND);
+		return;
+	}
+    if (stat(full_path.c_str(), &sb) == 0 && S_ISREG(sb.st_mode)) {
+		if (access(full_path.c_str(), X_OK) != 0) {
+			cout << "File can not be executed!" << endl;
+			_changeState(CGI_ERROR, HTTP_CODE_FORBIDDEN);
+			return;
+		}
+    } else {
+		cout << "Not a regular file!" << endl;
+		_changeState(CGI_ERROR, HTTP_CODE_FORBIDDEN);
+		return;
+	}
+
 	_child_pid = fork();
 	if (_child_pid == 0) {
 		extern char **environ;
@@ -115,19 +136,17 @@ void CgiHandler::_createChildProcess() {
 		setenv("SERVER_PROTOCOL", _cgi_environment.env_server_protocol.c_str(), 1);
 		setenv("SERVER_SOFTWARE", _cgi_environment.env_server_software.c_str(), 1);
 
-		// NEED TO PARSE TO MAKE SURE PATH EXISTS AND CAN BE EXECUTED!!
-
-		string full_path = _cgi_environment.exec_path;
-		// full_path = "www/cgi-bin/idk.pyss";
 		char* const argv[] = { const_cast<char*>(full_path.c_str()), NULL };
+
+		sleep(3); // just here to test async/multiple clients
+
 		cout << "Execveing path: " << full_path << endl;
-		// WTF? memoryysdfa f;slakdjfakjfhlkdjfhadkjfhaassdlkjhljasahsdflkjasdhflkassjdfhas
-		sleep(0); // just here to test async/multiple clients
 		execve(full_path.c_str(), argv, environ);
 		cout << "Execve failed" << endl;
+
 		_server.~WebServer();
-		// (void)_server;
 		cout << "Finished calling webserv destructor" << endl;
+
 		close(_pipe[0]);
 		close(_pipe[1]);
 		// delete this;
@@ -142,13 +161,13 @@ void CgiHandler::update() {
 	(void)_response;
 
 	if (_state == CGI_ERROR) {
-
 		return;
 	}
 	if (_state == CGI_PROCESSING) {
 		if (!_created_child) {
 			_created_child = true;
 			_createChildProcess();
+			return;
 		}
 
 		int result;
