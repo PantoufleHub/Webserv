@@ -8,19 +8,14 @@ WebServer::WebServer(const string& config_file) {
 }
 
 WebServer::~WebServer() {
-	cout << "~WS destructor WITH " << _clients.size() << "CLIENTS" << endl;
-	
 	map<int, ClientHandler*>::iterator client_it = _clients.begin(); 
 	while (client_it != _clients.end()) {
 		ClientHandler *client = client_it->second;
 		if (client)
 			delete client;
-		// client = NULL;
 		_clients.erase(client_it);
 		client_it = _clients.begin();
 	}
-
-	cout << "WS DESTRUCTOR DESTRUCTED HAHAHAHAHAHA" << endl;
 }
 
 void WebServer::addPollFd(pollfd pfd) {

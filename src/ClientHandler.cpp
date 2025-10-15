@@ -439,7 +439,6 @@ void ClientHandler::_postResource() {
 			return;
 		}
 	}
-
 }
 
 void ClientHandler::_deleteResource() {
