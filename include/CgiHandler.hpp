@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cstring>
 #include <vector>
+#include <sys/stat.h>
 
 class WebServer;
 
