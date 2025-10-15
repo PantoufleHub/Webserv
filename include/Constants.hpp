@@ -23,6 +23,9 @@ const string HEADER_LOCATION = "Location";
 
 const string TYPE_HTML = "text/html";
 const string TYPE_PLAIN = "text/plain";
+const string TYPE_PNG = "image/png";
+const string TYPE_JPG = "image/jpg";
+
 const string ENCODING_CHUNKED = "chunked";
 
 const int HTTP_CODE_OK = 200;
