@@ -14,5 +14,4 @@
 #define index_config 16
 #define error_config 8
 #define allow_method_config 4
-#define cgi_index 2
 #define client_max_body_size 1

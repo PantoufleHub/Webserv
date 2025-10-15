@@ -8,13 +8,19 @@ WebServer::WebServer(const string& config_file) {
 }
 
 WebServer::~WebServer() {
+	cout << "~WS destructor WITH " << _clients.size() << "CLIENTS" << endl;
+	
 	map<int, ClientHandler*>::iterator client_it = _clients.begin(); 
 	while (client_it != _clients.end()) {
-		if (client_it->second) {
-			ClientHandler& client = *client_it->second;
-			delete &client;
-		}
+		ClientHandler *client = client_it->second;
+		if (client)
+			delete client;
+		// client = NULL;
+		_clients.erase(client_it);
+		client_it = _clients.begin();
 	}
+
+	cout << "WS DESTRUCTOR DESTRUCTED HAHAHAHAHAHA" << endl;
 }
 
 void WebServer::addPollFd(pollfd pfd) {
@@ -120,8 +126,8 @@ void WebServer::_openClientSocket(int listening_socket) {
 
 	struct pollfd new_client_pollfd;
 	new_client_pollfd.fd = new_client_socket_fd;
-	// Change the events !?
 	new_client_pollfd.events = POLLIN;
+	new_client_pollfd.revents = 0;
 	_clients[new_client_socket_fd] = new ClientHandler(Socket(new_client_socket_fd), this);
 	_pollfds.push_back(new_client_pollfd);
 
@@ -161,12 +167,19 @@ void WebServer::_garbageCollectClients() {
 	// 		<< " " << _pollfds.size() << " pollfds remaining\n" << endl;
 }
 
+bool g_interrupt = false;
+void handler(int signum) {
+	cout << "Caught signal: " << signum << endl;
+	g_interrupt = true;
+}
+
 void WebServer::run() {
 	_openAllServerSockets();
 	int poll_timeout = POLL_TIMEOUT;
 	int poll_result;
+	signal(SIGINT, handler);
 
-	while (1) {
+	while (!g_interrupt) {
 		poll_result = poll (&_pollfds[0], _pollfds.size(), poll_timeout);
 		(void)poll_result; // return value actually needed?
 		// cout << "-- POLL: " << poll_result << " pollfds updated --" << endl;
@@ -204,7 +217,7 @@ void WebServer::display() const {
 		}
 		for (size_t i = 0; i < locations.size(); i++) {
 			cout << "\nLocations" << "[" << i << "]: " << flush;
-			map<string, vector<string> > cgi = locations[i].getCgi();
+			string cgi = locations[i].getCgi();
 			map<int, string> redirect = locations[i].getRedirect();
 			if (cgi.empty()) {
 				cout << locations[i].getNames()[0] << "\nRoot: " << locations[i].getRoot()
@@ -218,14 +231,9 @@ void WebServer::display() const {
 					cout << locations[i].getAllowedMethods()[it] << endl;
 			} else {
 				cout << "Cgi: " << locations[i].getNames()[0] << endl;
-				for (map<string, vector<string> >::iterator itCgi = cgi.begin(); itCgi != cgi.end(); itCgi++) {
-					cout << "Key: " << itCgi->first << " Values: " << flush;
-					for (size_t i = 0; i < itCgi->second.size(); i++)
-						cout << itCgi->second[i] << "; " << flush;
-					cout << endl;
+				cout << "Key: " << cgi << endl;
 				}
 			}
-		}
 		cout << "\nEntryPoints:\n" << flush;
 		for (size_t i = 0; i < eP.size(); i++) {
 			cout << "EntryPoint " << i << ":\nPort: " << eP[i].port << " IP: " << eP[i].ip << endl;

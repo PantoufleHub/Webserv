@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <arpa/inet.h>
+#include <sstream>
 
 using namespace std;
 
@@ -19,10 +20,12 @@ class Socket {
 	Socket();
 	Socket(int fd);
 
-	string getIpString() const;
-	string getPeerIpString() const;
-	uint16_t getPort() const;
-	uint16_t getPeerPort() const;
+	string		getIpString() const;
+	string		getPeerIpString() const;
+	uint16_t	getPort() const;
+	string		getPortString() const;
+	uint16_t	getPeerPort() const;
+	string		getPeerPortString() const;
 
 	const sockaddr_in& getSockAddr() const;
 	const sockaddr_in& getPeerSockAddr() const;

@@ -27,8 +27,24 @@ uint16_t Socket::getPort() const {
 	return ntohs(_socket_address.sin_port);
 }
 
+string Socket::getPortString() const {
+	stringstream ret_strstr;
+
+	ret_strstr << getPort();
+
+	return ret_strstr.str();
+}
+
 uint16_t Socket::getPeerPort() const {
 	return ntohs(_peer_socket_address.sin_port);
+}
+
+string Socket::getPeerPortString() const {
+	stringstream ret_strstr;
+
+	ret_strstr << getPeerPort();
+
+	return ret_strstr.str();
 }
 
 const sockaddr_in& Socket::getSockAddr() const {

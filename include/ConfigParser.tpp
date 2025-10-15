@@ -35,11 +35,10 @@ void SetDirectives(int key, T& value, T2& block) {
         block.setRoot(value);
         break;
     case cgi_pass:
-    case cgi_index:
         static_cast<Location&>(block).setCgi(value);
         break;
     case client_max_body_size:
-        static_cast<Location&>(block).setClientMaxBodySize(value);
+        block.setClientMaxBodySize(value);
         break;
     case upload_store:
         block.setUploadStore(value);
@@ -53,5 +52,4 @@ void SetDirectives(int key, T& value, T2& block) {
     default:
         break;
     }
-}
-
+    }

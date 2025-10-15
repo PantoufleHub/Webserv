@@ -56,7 +56,7 @@ const string HttpRequest::getHeaderValue(const string& header) const {
 			return (*iter).second;
 		iter++;
 	}
-	Logger::logError("getHeaderValue: header not found");
+	Logger::logError("getHeaderValue: header \"" + header + "\" not found ");
 	return "";
 }
 

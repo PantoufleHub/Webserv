@@ -10,7 +10,7 @@ static ofstream _error_log(ERROR_LOG_FILE.c_str(), ios::trunc);
 
 void Logger::_log(ofstream& log, const ostringstream& os) {
 	if (!log.is_open())
-		cerr << "Log not open" << std::endl;
+		cout << "Log not open" << std::endl;
 	else {
 		log << "| " << _getNow() << " | " << os.str() << endl;
 	}
@@ -71,7 +71,7 @@ void Logger::logDisconnection(int socket_fd) {
 // }
 
 void Logger::logError(const std::string& message) {
-	std::cerr << "[Error] " << message << std::endl;
+	std::cout << "[Error] " << message << std::endl;
 }
 
 /// @brief Get current time

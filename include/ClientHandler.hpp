@@ -19,6 +19,7 @@
 using namespace std;
 
 class WebServer;
+class CgiHandler;
 
 enum ClientState {
 	CLIENT_READING, // Waiting for request
@@ -53,7 +54,7 @@ typedef struct PostInfo{
 } PostInfo;
 
 typedef struct CgiInfo {
-	CgiHandler		*CgiHandler;
+	CgiHandler		*cgi_handler;
 } CgiInfo;
 
 class ClientHandler {
@@ -93,6 +94,7 @@ class ClientHandler {
 	void _deleteResource();
 	void _process();
 
+	void _fillCgiInfoPacket();
 	void _cgi();
 
 	void _error();

@@ -132,10 +132,13 @@ static int getContentLength(const string& dataIn) {
 }
 
 int HttpRequestParser::checkDataIn(const string& _data_in) {
+	// bool	isChunked = false;
 	size_t request_end = _data_in.find("\r\n\r\n");
 	if (request_end == string::npos) {
 		return 0;
 	}
+	// else if (_data_in.find("transfer-encoding: chunked", _data_in.at(0), request_end))
+		// isChunked = true;
 
 	size_t first_line_end = _data_in.find("\r\n");
 	string first_line = _data_in.substr(0, first_line_end);
@@ -166,6 +169,10 @@ int HttpRequestParser::checkDataIn(const string& _data_in) {
 		if (content_length == -1) {
 			Logger::logError("POST without Content-Length, assuming no body");
 			return static_cast<int>(request_end + REQUEST_EOF);
+		}
+		if (content_length > static_cast<int>(MAX_REQUEST_LENGTH)) {
+			Logger::logError("Content-Length exceeds maximum allowed size");
+			return -1;
 		}
 		if (content_length == 0)
 			return static_cast<int>(request_end + REQUEST_EOF);

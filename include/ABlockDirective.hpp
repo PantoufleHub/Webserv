@@ -17,9 +17,9 @@ class ABlockDirective {
 	std::vector<std::string> _names;
 	std::vector<int> _ports;
 	std::string _upload_store;
-	std::string _client_max_body_size;
 	std::string _root;
-	bool _autoindex;
+	size_t	_client_max_body_size;
+	bool	_autoindex;
 
    public:
 	ABlockDirective();
@@ -32,8 +32,8 @@ class ABlockDirective {
 	const std::vector<std::string>& getNames() const;
 	const std::vector<int>& getPorts() const;
 	const std::string& getRoot() const;
-	const std::string& getClientMaxBodySize() const;
 	const std::string& getUploadStore() const;
+	const size_t& getClientMaxBodySize() const;
 	const bool& getAutoIndex() const;
 
 	std::vector<std::string>& mutableIndexes();
@@ -49,6 +49,7 @@ class ABlockDirective {
 	void setPorts(std::vector<std::string>::iterator& it);
 	void setErrors(std::vector<std::string>::iterator& it);
 	void setClientMaxBodySize(std::vector<std::string>::iterator& it);
+	void setClientMaxBodySize();
 	void setUploadStore(std::vector<std::string>::iterator& it);
 	void setAutoIndex(std::vector<std::string>::iterator& it);
 	void setRedirect(std::vector<std::string>::iterator& it);
