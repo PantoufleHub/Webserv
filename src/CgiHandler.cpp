@@ -119,6 +119,7 @@ void CgiHandler::_createChildProcess() {
 		setenv("SERVER_SOFTWARE", _cgi_environment.env_server_software.c_str(), 1);
 
 		string full_path = _cgi_environment.exec_path;
+		// full_path = "www/cgi-bin/idk.pyss";
 		char* const argv[] = { const_cast<char*>(full_path.c_str()), NULL };
 		cout << "Execveing path: " << full_path << endl;
 		// WTF? memoryysdfa f;slakdjfakjfhlkdjfhadkjfhaassdlkjhljasahsdflkjasdhflkassjdfhas

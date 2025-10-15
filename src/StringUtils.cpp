@@ -66,8 +66,63 @@ bool StringUtils::is_hex_string(const string &s) {
 	return true;
 }
 
-// string StringUtils::pathConcatenate(const string& path1, const string& path2) {
-// 	string ret;
+/// @brief Trim slashes from a string
+/// @param input The string to trim
+/// @param trim_start Whether to trim the starting slashes
+/// @param trim_end Whether to trim the ending slashes
+/// @return The trimmed string
+string StringUtils::trimSlashes(const std::string& input, bool trim_start = true, bool trim_end = true) {
+	size_t start = 0;
+	size_t end = input.length();
 
+	if (trim_start) {
+		while (start < end && input[start] == '/') {
+			start++;
+		}
+	}
 
-// }
+	if (trim_end) {
+		while (end > start && input[end - 1] == '/') {
+			end--;
+		}
+	}
+
+	return input.substr(start, end - start);
+}
+
+/// @brief Concatenate two paths with choice of starting/ending slashes
+/// @param path1 The first path to concatenate
+/// @param path2 The second path to concatenate
+/// @param starting_slash Whether the concatenated path starts with a slash
+/// @param ending_slash Whether the concatenated path ends with a slash
+/// @return The concatenated path
+string StringUtils::pathConcatenate(const string& path1, const string& path2, bool starting_slash = false, bool ending_slash = false) {
+	string ret;
+
+	string clean_path1 = trimSlashes(path1);
+	string clean_path2 = trimSlashes(path2);
+
+	ret = (starting_slash ? "/" : "")
+		+ clean_path1
+		+ "/"
+		+ clean_path2
+		+ (ending_slash ? "/" : "");
+
+	return ret;
+}
+
+/// @brief Concatenate two paths with choice of trimming starting/ending slashes
+/// @param path1 The first path to concatenate
+/// @param path2 The second path to concatenate
+/// @param trim_start Whether to trim start slashes
+/// @param trim_end Whether to trim end slashes
+/// @return The concatenated path
+string StringUtils::pathConcatenate(const string& path1, const string& path2, bool trim_start = false, bool trim_end = false) {
+	string ret;
+	string clean_path1 = trimSlashes(path1, trim_start, true);
+	string clean_path2 = trimSlashes(path2, true, trim_end);
+
+	ret = clean_path1 + "/" + clean_path2;
+
+	return ret;
+}
