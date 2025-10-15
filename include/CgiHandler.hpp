@@ -6,6 +6,8 @@
 #include "Socket.hpp"
 
 #include <iostream>
+#include <cstring>
+#include <vector>
 
 class WebServer;
 
@@ -18,6 +20,8 @@ typedef enum CgiState {
 } CgiState;
 
 typedef struct CgiEnvironment {
+	string script_raw_name;
+	string exec_path;
 	string env_auth_type;
     string env_content_length;
     string env_content_type;
@@ -39,16 +43,17 @@ typedef struct CgiEnvironment {
 
 class CgiHandler{
    private:
-	CgiState			_state;
-	int					_child_pid;
-	int					_child_status;
-	int					_pipe[2];
-	int					_error_code;
-	const HttpResponse	&_response;
-	const HttpRequest	&_request;
-	const VirtualServer	&_client_server;
-	const Socket		&_client_socket;
-	CgiEnvironment		_cgi_environment;
+	CgiState				_state;
+	int						_child_pid;
+	int						_child_status;
+	int						_pipe[2];
+	int						_error_code;
+	const HttpResponse&		_response;
+	const HttpRequest&		_request;
+	const VirtualServer&	_client_server;
+	const Location&			_client_location;
+	const Socket&			_client_socket;
+	CgiEnvironment			_cgi_environment;
 
 	void _parseInfo();
 	void _changeState(CgiState state, int error_code);
@@ -56,10 +61,11 @@ class CgiHandler{
    public:
 	void _init_();
 	
-	CgiHandler(	const HttpResponse	&response,
-				const HttpRequest	&request,
-				const VirtualServer	&client_server,
-				const Socket		&client_socket);
+	CgiHandler(	const HttpResponse&		response,
+				const HttpRequest&		request,
+				const VirtualServer&	client_server,
+				const Location&			client_location,
+				const Socket&			client_socket);
 
 	void update();
 

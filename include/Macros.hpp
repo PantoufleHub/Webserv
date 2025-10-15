@@ -19,6 +19,6 @@ using namespace std;
 
 #define ASSERT(condition)                                                                                          \
 	if (!(condition)) {                                                                                            \
-		cerr << "Assertion failed: " << #condition << ", file " << __FILE__ << ", line " << __LINE__ << std::endl; \
+		cout << "Assertion failed: " << #condition << ", file " << __FILE__ << ", line " << __LINE__ << std::endl; \
 		exit(EXIT_FAILURE);                                                                                        \
 	}

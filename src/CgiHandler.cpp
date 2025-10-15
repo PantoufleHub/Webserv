@@ -13,10 +13,12 @@ void CgiHandler::_init_() {
 CgiHandler::CgiHandler(	const HttpResponse	&response,
 						const HttpRequest	&request,
 						const VirtualServer	&client_server,
+						const Location		&client_location,
 						const Socket 		&client_socket) : 
 						_response(response),
 						_request(request),
 						_client_server(client_server),
+						_client_location(client_location),
 						_client_socket(client_socket) {
 	_init_();
 
@@ -54,13 +56,13 @@ CgiHandler::CgiHandler(	const HttpResponse	&response,
     	setenv("SERVER_PROTOCOL", _cgi_environment.env_server_protocol.c_str(), 1);
     	setenv("SERVER_SOFTWARE", _cgi_environment.env_server_software.c_str(), 1);
 
-		string path = (string("www/cgi-bin") + _request.getPath());
-		char* const argv[] = { const_cast<char*>(path.c_str()), NULL };
-		cout << "execveing path: " << path << endl;
+		string full_path = _cgi_environment.exec_path;
+		char* const argv[] = { const_cast<char*>(full_path.c_str()), NULL };
+		cout << "Execveing path: " << full_path << endl;
+		// WTF? memoryysdfa f;slakdjfakjfhlkdjfhadkjfhaassdlkjhljasahsdflkjasdhflkassjdfhas
 		sleep(5); // just here to test async/multiple clients
-		execve(path.c_str(), argv, environ);
-
-		exit(0);
+		execve(full_path.c_str(), argv, environ);
+		exit(EXIT_FAILURE);
 	} else {
 
 	}
@@ -86,19 +88,35 @@ void CgiHandler::_changeState(CgiState state, int error_code = 0) {
 }
 
 void CgiHandler::_parseInfo() {
+	string request_path = _request.getPath();
+	size_t question_mark_pos = request_path.find("?");
+	string script_name = request_path.substr(0, question_mark_pos);
+	string query_string = request_path.substr(question_mark_pos + 1);
+
+	const map<string, vector<string> > caca = _client_location.getCgi();
+	string pass = caca.at("cgi_pass")[0];
+	pass = pass.substr(0, pass.rfind("/")); // remove last /
+
+	size_t last_slash_pos = script_name.rfind("/"); 
+	string script_raw = script_name.substr(last_slash_pos);
+	string full_path = pass + script_raw;
+
+	_cgi_environment.exec_path = full_path;
+	_cgi_environment.script_raw_name = script_raw;
+
 	_cgi_environment.env_auth_type = "user";
     _cgi_environment.env_content_length = _request.getHeaderValue(HEADER_CONTENT_LENGTH);
     _cgi_environment.env_content_type = _request.getHeaderValue(HEADER_CONTENT_TYPE);
     _cgi_environment.env_gateway_interface = "CGI/0.0"; // pre-alpha release
     _cgi_environment.env_path_info = "NULL"; // Path after script
-    _cgi_environment.env_path_translated = "NULL"; // Wot ?
-    _cgi_environment.env_query_string = "NULL"; // Path after '?'
+    _cgi_environment.env_path_translated = "NULL"; // ?
+    _cgi_environment.env_query_string = query_string;
     _cgi_environment.env_remote_addr = _client_socket.getPeerIpString();
-    _cgi_environment.env_remote_host = "NULL";
+    _cgi_environment.env_remote_host = "NULL"; // ?
     _cgi_environment.env_remote_ident = "NULL"; // ?
     _cgi_environment.env_remote_user = "NULL"; // ?
     _cgi_environment.env_request_method = _request.getMethod();
-    _cgi_environment.env_script_name = "NULL"; // /cgi-bin/idk.sh
+    _cgi_environment.env_script_name = script_name;
     _cgi_environment.env_server_name = _client_server.getNames()[0];
     _cgi_environment.env_server_port = _client_socket.getPeerPort();
     _cgi_environment.env_server_protocol = HTTP_VERSION;
@@ -119,8 +137,9 @@ void CgiHandler::update() {
 		// SENDING BODY ALSO? parse response when done
 	} else if (result == _child_pid) {
 		cout << "Cgi finished" << endl;
+		// If bad status BAD_GATEWAY
 		// Should finish when response is ready
-		_state = CGI_FINISHED;
+		_changeState(CGI_FINISHED);
 	}
 }
 

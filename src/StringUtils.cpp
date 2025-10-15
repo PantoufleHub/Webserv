@@ -65,3 +65,9 @@ bool StringUtils::is_hex_string(const string &s) {
 	}
 	return true;
 }
+
+// string StringUtils::pathConcatenate(const string& path1, const string& path2) {
+// 	string ret;
+
+
+// }

@@ -56,7 +56,7 @@ ClientHandler::~ClientHandler() {
 		close(_post_info.fd);
 		_post_info.fd = -1;
 	}
-	if (_cgi_info.cgi_handler){
+	if (_cgi_info.cgi_handler) {
 		cout << "Deleting CgiHandler" << endl;
 		delete _cgi_info.cgi_handler;
 	}
@@ -68,7 +68,7 @@ ClientHandler::~ClientHandler() {
 void ClientHandler::_changeState(ClientState newState, const int statusCode = 0) {
 	_state = newState;
 	int fd = _socket.getFd();
-	pollfd& client_pfd = _server->getPollFd(fd);
+	pollfd &client_pfd = _server->getPollFd(fd);
 	if (statusCode)
 		_response.setStatusCode(statusCode);
 
@@ -135,13 +135,12 @@ void ClientHandler::_checkRequestBuffer() {
 
 void ClientHandler::_read() {
 	int fd = _socket.getFd();
-	pollfd& pfd = _server->getPollFd(fd);
+	pollfd &pfd = _server->getPollFd(fd);
 	if (!WebUtils::canRead(pfd))
 		return;
 
 	char buffer[_buffer_size + 1];
 	ssize_t bytes_received = recv(fd, buffer, _buffer_size, 0);
-	buffer[_buffer_size] = '\0';
 
 	if (bytes_received < 0) {
 		cout << "Error reading from client " << fd << endl;
@@ -152,6 +151,7 @@ void ClientHandler::_read() {
 		_changeState(CLIENT_DONE);
 		
 	} else {
+		buffer[bytes_received] = '\0';
 		string data_read(buffer, bytes_received);
 		cout << "Received " << bytes_received << " bytes from client " << fd << endl;
 		_request_buffer += data_read;
@@ -322,7 +322,7 @@ void ClientHandler::_getResourceDirectory() {
 				cout << "Found index file: " << test_path << endl;
 				_response_info.fd_to_send = open(test_path.c_str(), O_RDONLY);
 				if (_response_info.fd_to_send < 0) {
-					cerr << "Error opening file descriptor for: " << test_path << endl;
+					cout << "Error opening file descriptor for: " << test_path << endl;
 					_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 					return;
 				}
@@ -359,14 +359,14 @@ void ClientHandler::_getResource() {
 
 	bool isDir = S_ISDIR(info.st_mode);
 	if (isDir) {
-		cerr << "Found directory not a file" << endl;
+		cout << "Found directory not a file" << endl;
 		_changeState(CLIENT_ERRORING, HTTP_CODE_NOT_FOUND);
 		return;
 	}
 
 	_response_info.fd_to_send = open(path.c_str(), O_RDONLY);
 	if (_response_info.fd_to_send < 0) {
-		cerr << "Error opening file descriptor for: " << path << endl;
+		cout << "Error opening file descriptor for: " << path << endl;
 		_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 		return;
 	}
@@ -405,7 +405,8 @@ void ClientHandler::_postResource() {
 		new_pfd.fd = _post_info.fd;
 		_server->addPollFd(new_pfd);
 	} else {
-		if (!WebUtils::canWrite(_server->getPollFd(_post_info.fd))) {
+		pollfd &pfd = _server->getPollFd(_post_info.fd);
+		if (!WebUtils::canWrite(pfd)) {
 			cout << "Unable to  write to fd " << _post_info.fd << endl;
 			return;
 		}
@@ -435,7 +436,7 @@ void ClientHandler::_deleteResource() {
 	cout << "Deleting resource at path: " << path << endl;
 
 	if (remove(path.c_str()) != 0) {
-		cerr << "Error deleting file: " << path << endl;
+		cout << "Error deleting file: " << path << endl;
 		_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 		return;
 	}
@@ -463,14 +464,19 @@ void ClientHandler::_process() {
 	const string path = _request->getPath();
 
 	// script second
-	// disgusting code i know
-	if (path.size() >= 3 ) {
-		string extension = path.substr(path.size() - 3);
-		cout << "Found extension: " << extension << endl;
-		if (extension == PYTHON_EXTENSION || extension == SHELL_EXTENSION) {
+	// Not using cgi_index for now
+	const map<string, vector<string> > cgistuff = _parsed_info.matching_location->getCgi();
+	if (!cgistuff.empty()) {
+		if (cgistuff.find("cgi_pass") != cgistuff.end()) {
+			cout << "Found cgi_pass, changing to cgi state" << endl;
 			_changeState(CLIENT_CGIING);
 			return;
+		} else {
+			cout << "No cgi_pass! Error mode activated" << endl;
+			_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
+			return;
 		}
+		return;
 	}
 
 	// ya mum third oooh ahaha lol
@@ -502,6 +508,7 @@ void ClientHandler::_cgi() {
 		_cgi_info.cgi_handler = new CgiHandler(	_response,
 												*_request,
 												*_parsed_info.matching_server,
+												*_parsed_info.matching_location,
 												_socket);
 		if (!_cgi_info.cgi_handler) {
 			cout << "Error creating cgiHandler" << endl;
@@ -541,7 +548,7 @@ void ClientHandler::_error() {
 void ClientHandler::_respond() {
 	int fd = _socket.getFd();
 	int fd_to_send = _response_info.fd_to_send;
-	pollfd& pfd = _server->getPollFd(fd); // ERROR HERE
+	pollfd &pfd = _server->getPollFd(fd); // ERROR HERE
 
 	if (!WebUtils::canWrite(pfd))
 		return;
@@ -578,7 +585,8 @@ void ClientHandler::_respond() {
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
 
 	} else {
-		if (!WebUtils::canRead(_server->getPollFd(fd_to_send))) {
+		pollfd &pfd = _server->getPollFd(fd_to_send);
+		if (!WebUtils::canRead(pfd)) {
 			cout << "Not able to read from fd " << fd_to_send << endl;
 			return;
 		}

@@ -55,7 +55,7 @@ void HttpUtils::getErrorPage(HttpResponse &response, const Location& location, i
 			response.setBody("text/html", content);
 			return;
 		} else {
-			cerr << "Error opening error page " << error_file << endl;
+			cout << "Error opening error page " << error_file << endl;
 		}
 	}
 	response.setBody("text/html", _getDefaultErrorPage(status_code));
@@ -132,7 +132,7 @@ void HttpUtils::getAutoIndexPage(HttpResponse &response, const Location& locatio
 
 	DIR* dir = opendir(path.c_str());
 	if (!dir) {
-		std::cerr << "Could not open directory: " << path << std::endl;
+		std::cout << "Could not open directory: " << path << std::endl;
 		HttpUtils::getErrorPage(response, location, HTTP_CODE_FORBIDDEN);
 		return;
 	}
@@ -149,7 +149,7 @@ void HttpUtils::getAutoIndexPage(HttpResponse &response, const Location& locatio
 
 		struct stat info;
 		if (stat(full_path.c_str(), &info) != 0) {
-			std::cerr << "Stat failed for: " << full_path << std::endl;
+			std::cout << "Stat failed for: " << full_path << std::endl;
 			continue;
 		}
 
