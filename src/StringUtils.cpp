@@ -71,7 +71,7 @@ bool StringUtils::is_hex_string(const string &s) {
 /// @param trim_start Whether to trim the starting slashes
 /// @param trim_end Whether to trim the ending slashes
 /// @return The trimmed string
-string StringUtils::trimSlashes(const std::string& input, bool trim_start = true, bool trim_end = true) {
+string StringUtils::trimSlashes(const std::string& input, bool trim_start, bool trim_end) {
 	size_t start = 0;
 	size_t end = input.length();
 
@@ -96,11 +96,11 @@ string StringUtils::trimSlashes(const std::string& input, bool trim_start = true
 /// @param starting_slash Whether the concatenated path starts with a slash
 /// @param ending_slash Whether the concatenated path ends with a slash
 /// @return The concatenated path
-string StringUtils::pathConcatenate(const string& path1, const string& path2, bool starting_slash = false, bool ending_slash = false) {
+string StringUtils::pathConcatenateFlex(const string& path1, const string& path2, bool starting_slash, bool ending_slash) {
 	string ret;
 
-	string clean_path1 = trimSlashes(path1);
-	string clean_path2 = trimSlashes(path2);
+	string clean_path1 = trimSlashes(path1, true, true);
+	string clean_path2 = trimSlashes(path2, true, true);
 
 	ret = (starting_slash ? "/" : "")
 		+ clean_path1
@@ -117,7 +117,7 @@ string StringUtils::pathConcatenate(const string& path1, const string& path2, bo
 /// @param trim_start Whether to trim start slashes
 /// @param trim_end Whether to trim end slashes
 /// @return The concatenated path
-string StringUtils::pathConcatenate(const string& path1, const string& path2, bool trim_start = false, bool trim_end = false) {
+string StringUtils::pathConcatenateTrim(const string& path1, const string& path2, bool trim_start, bool trim_end) {
 	string ret;
 	string clean_path1 = trimSlashes(path1, trim_start, true);
 	string clean_path2 = trimSlashes(path2, true, trim_end);

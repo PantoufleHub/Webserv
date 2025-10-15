@@ -66,13 +66,13 @@ void CgiHandler::_parseInfo() {
 
 	const map<string, vector<string> > caca = _client_location.getCgi();
 	string pass = caca.at("cgi_pass")[0];
-	pass = pass.substr(0, pass.rfind("/")); // remove last /
+	pass = StringUtils::trimSlashes(pass, false, true);
 
 	size_t last_slash_pos = script_name.rfind("/"); 
 	string script_raw = script_name.substr(last_slash_pos);
-	string full_path = pass + script_raw;
+	script_raw = StringUtils::trimSlashes(script_raw, true, true);
 
-	_cgi_environment.exec_path = full_path;
+	_cgi_environment.exec_path = StringUtils::pathConcatenateTrim(pass, script_raw, false, false);
 	_cgi_environment.script_raw_name = script_raw;
 
 	_cgi_environment.env_auth_type = "user";
@@ -95,8 +95,6 @@ void CgiHandler::_parseInfo() {
 }
 
 void CgiHandler::_createChildProcess() {
-	_created_child = true;
-
 	_child_pid = fork();
 	if (_child_pid == 0) {
 		extern char **environ;
@@ -117,6 +115,8 @@ void CgiHandler::_createChildProcess() {
 		setenv("SERVER_PORT", _cgi_environment.env_server_port.c_str(), 1);
 		setenv("SERVER_PROTOCOL", _cgi_environment.env_server_protocol.c_str(), 1);
 		setenv("SERVER_SOFTWARE", _cgi_environment.env_server_software.c_str(), 1);
+
+		// NEED TO PARSE TO MAKE SURE PATH EXISTS AND CAN BE EXECUTED!!
 
 		string full_path = _cgi_environment.exec_path;
 		// full_path = "www/cgi-bin/idk.pyss";
@@ -148,6 +148,7 @@ void CgiHandler::update() {
 	}
 	if (_state == CGI_PROCESSING) {
 		if (!_created_child) {
+			_created_child = true;
 			_createChildProcess();
 		}
 

@@ -18,6 +18,6 @@ class StringUtils {
 	static bool is_hex_char(char c);
 	static bool is_hex_string(const string &s);
 	static string trimSlashes(const string& input, bool trim_start, bool trim_end);
-	static string pathConcatenate(const string& path1, const string& path2, bool starting_slash, bool ending_slash);
-	static string pathConcatenate(const string& path1, const string& path2, bool trim_start, bool trim_end);
+	static string pathConcatenateFlex(const string& path1, const string& path2, bool starting_slash, bool ending_slash);
+	static string pathConcatenateTrim(const string& path1, const string& path2, bool trim_start, bool trim_end);
 };
