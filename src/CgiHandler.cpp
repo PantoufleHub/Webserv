@@ -141,14 +141,14 @@ void CgiHandler::_createChildProcess() {
 		sleep(3); // just here to test async/multiple clients
 
 		cout << "Execveing path: " << full_path << endl;
+		close(_pipe[0]);
+		close(_pipe[1]);
 		execve(full_path.c_str(), argv, environ);
 		cout << "Execve failed" << endl;
 
 		_server.~WebServer();
 		cout << "Finished calling webserv destructor" << endl;
 
-		close(_pipe[0]);
-		close(_pipe[1]);
 		// delete this;
 		exit(EXIT_FAILURE);
 	} else {
@@ -175,10 +175,12 @@ void CgiHandler::update() {
 		if (result == 0) {
 			// parent behaviour (Will be parsing response i think)
 			// SENDING BODY ALSO? parse response when done
+
 		} else if (result == _child_pid) {
 			cout << "Cgi finished" << endl;
 			// If bad status BAD_GATEWAY
 			// Should finish when response is ready
+
 			_changeState(CGI_FINISHED);
 		}
 	}

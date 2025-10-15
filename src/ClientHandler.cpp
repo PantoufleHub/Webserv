@@ -487,9 +487,8 @@ void ClientHandler::_process() {
 	const string path = _request->getPath();
 
 	// script second
-	// Not using cgi_index for now
 	string cgistuff = _parsed_info.matching_location->getCgi();
-	if (!cgistuff.empty()) {
+	if (!cgistuff.empty() && path[path.size() - 1] != '/') {
 		cout << "Found cgi_pass, changing to cgi state" << endl;
 		_changeState(CLIENT_CGIING);
 		return;
