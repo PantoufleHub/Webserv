@@ -507,6 +507,7 @@ void ClientHandler::_cgi() {
 		// BLEGH
 		_cgi_info.cgi_handler = new CgiHandler(	_response,
 												*_request,
+												*_server,
 												*_parsed_info.matching_server,
 												*_parsed_info.matching_location,
 												_socket);
@@ -515,6 +516,11 @@ void ClientHandler::_cgi() {
 			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 			return;
 		}
+		//TEMP
+		// delete _cgi_info.cgi_handler;
+		// _cgi_info.cgi_handler = NULL;
+		// _changeState(CLIENT_ERRORING, 567);
+		// return;
 	}
 
 	if (_cgi_info.cgi_handler->getState() == CGI_ERROR) {

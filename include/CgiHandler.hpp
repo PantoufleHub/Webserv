@@ -43,6 +43,7 @@ typedef struct CgiEnvironment {
 
 class CgiHandler{
    private:
+	bool					_created_child;
 	CgiState				_state;
 	int						_child_pid;
 	int						_child_status;
@@ -50,25 +51,27 @@ class CgiHandler{
 	int						_error_code;
 	const HttpResponse&		_response;
 	const HttpRequest&		_request;
+	const WebServer&		_server;
 	const VirtualServer&	_client_server;
 	const Location&			_client_location;
 	const Socket&			_client_socket;
 	CgiEnvironment			_cgi_environment;
 
-	void _parseInfo();
-	void _changeState(CgiState state, int error_code);
+	void	_parseInfo();
+	void	_changeState(CgiState state, int error_code);
+	void	_createChildProcess();
 
    public:
 	void _init_();
 	
 	CgiHandler(	const HttpResponse&		response,
 				const HttpRequest&		request,
+				const WebServer&		server,
 				const VirtualServer&	client_server,
 				const Location&			client_location,
 				const Socket&			client_socket);
 
 	void update();
-
 
 	const CgiState &getState() const;
 	const int &getErrorCode() const;
