@@ -126,7 +126,7 @@ void ClientHandler::_checkRequestBuffer() {
 		_changeState(CLIENT_DONE, HTTP_CODE_BAD_REQUEST); // Send error response? PL: BadRequest? Erroring?
 	} else {
 		// Incomplete request, keep reading
-		if (_request_buffer.size() > this->_parsed_info.matching_server->getClientMaxBodySize()) {
+		if (_request_buffer.size() > MAX_REQUEST_LENGTH) {
 			cout << "Request too large on socket " << _socket.getFd() << endl;
 			_changeState(CLIENT_DONE, HTTP_CODE_PAYLOAD_TOO_LARGE); // Send error response? PL: Payload too large? Erroring?
 		}
@@ -300,6 +300,15 @@ void ClientHandler::_parse() {
 	if (_state != CLIENT_PARSING)
 		return;
 
+	const size_t body_size = _request->getBody().size();
+	const size_t max_size = _parsed_info.matching_location->getClientMaxBodySize();
+
+	if (body_size > max_size) {
+		cout << "Request body (" << body_size << " bytes) exceeds limit (" 
+			<< max_size << " bytes)" << endl;
+		_changeState(CLIENT_ERRORING, HTTP_CODE_PAYLOAD_TOO_LARGE);
+		return;
+	}
 	_changeState(CLIENT_PROCESSING);
 }
 

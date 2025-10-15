@@ -23,6 +23,9 @@ void Location::inheritFromParent(const VirtualServer& parent) {
 	if (_indexes.empty()) {
 		_indexes = parent.getIndexes();
 	}
+	if (_client_max_body_size == 0) {
+		_client_max_body_size = parent.getClientMaxBodySize();
+	}
 }
 
 void Location::setCgi(std::vector<std::string>::iterator& it) {

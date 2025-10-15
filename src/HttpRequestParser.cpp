@@ -170,11 +170,15 @@ int HttpRequestParser::checkDataIn(const string& _data_in) {
 			Logger::logError("POST without Content-Length, assuming no body");
 			return static_cast<int>(request_end + REQUEST_EOF);
 		}
+		if (content_length > static_cast<int>(MAX_REQUEST_LENGTH)) {
+			Logger::logError("Content-Length exceeds maximum allowed size");
+			return -1;
+		}
 		if (content_length == 0)
 			return static_cast<int>(request_end + REQUEST_EOF);
 		size_t total_length = request_end + REQUEST_EOF + content_length;
 		if (_data_in.length() >= total_length) {
-			return static_cast<int>(total_length); // all good raoul
+			return static_cast<int>(total_length);
 		}
 		return 0;
 	}
