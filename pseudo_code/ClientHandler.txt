@@ -1,0 +1,41 @@
+/*
+/// definition
+
+	Socket _socket;
+    String _raw_request;
+	HttpRequest* _request;
+	HttpResponse* _response;
+	HttpRequestHandler* _request_handler;
+    WebServer* _webserver;
+    RequestHandler request_handler;
+
+
+/// Stage
+
+    PROCESSING_REQUEST
+    PROCESSING_RESPONSE
+
+/// implementation
+    
+    update():
+        if (GENERATING_REQUEST):
+            read_fd(chunk_size)
+            _raw_request = fetch_next_raw_request() //return empty if no request is valide in the data_in
+            if _raw_request is empty:
+                return
+            _request = new HttpRequest(raw_request) // generate the object request
+            _request_handler = new requestHandler(_request, ...)     // instantiate the requestHandler object
+            _raw_request = ""
+            _stage = PROCESSING_RESPONSE
+                
+        if (PROCESSING_RESPONSE):
+            if (not _request)
+                request_handler.update()   //request handler take a request and start to generate one or more response if the clientHanlder.response is already full it wait
+            if request:
+                responseSender(_response) //Response object is destroyed by the sender which allow the creation of a new one
+            if (RESPONSE_FINISHED && SENDING_DONE):
+                delete _request_handler
+                _stage = GENERATING_REQUEST
+        
+this code need to be updated to have error/disconnect management
+*/

@@ -1,0 +1,14 @@
+/*
+// per-request dispatcher: choose GET/POST/DELETE/CGI path and emit one response
+
+/// definition
+
+/// implementation
+
+    constructeur(Request, response_holder*):
+        _response_holder = response_holder;
+        parse_request(_request); //set virtualServer, check path, check errors, check validity etc
+
+    update():
+
+*/
