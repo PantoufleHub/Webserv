@@ -10,4 +10,4 @@
   echo -ne " World\r\n"
   echo -ne "0\r\n"
   echo -ne "\r\n"
-) | nc localhost 8080
+)

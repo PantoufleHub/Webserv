@@ -123,12 +123,12 @@ void ClientHandler::_checkRequestBuffer() {
 		Logger::logRequest(_request->toString(), _socket.getFd());
 	} else if (request_length < 0) {
 		cout << "Bad request on socket " << _socket.getFd() << endl;
-		_changeState(CLIENT_DONE, HTTP_CODE_BAD_REQUEST); // Send error response? PL: BadRequest? Erroring?
+		_changeState(CLIENT_ERRORING, HTTP_CODE_BAD_REQUEST); // Send error response? PL: BadRequest? Erroring?
 	} else {
 		// Incomplete request, keep reading
 		if (_request_buffer.size() > MAX_REQUEST_LENGTH) {
 			cout << "Request too large on socket " << _socket.getFd() << endl;
-			_changeState(CLIENT_DONE, HTTP_CODE_PAYLOAD_TOO_LARGE); // Send error response? PL: Payload too large? Erroring?
+			_changeState(CLIENT_ERRORING, HTTP_CODE_PAYLOAD_TOO_LARGE); // Send error response? PL: Payload too large? Erroring?
 		}
 	}
 }
@@ -549,7 +549,7 @@ void ClientHandler::_error() {
 	int fd = _socket.getFd();
 	cout << "Handling Error for request from client on socket " << fd << endl;
 
-	HttpUtils::getErrorPage(_response, *_parsed_info.matching_location, _response.getStatusCode());
+	HttpUtils::getErrorPage(_response, _parsed_info.matching_location, _response.getStatusCode());
 
 	_changeState(CLIENT_RESPONDING);
 }

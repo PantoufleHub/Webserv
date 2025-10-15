@@ -34,11 +34,15 @@ string HttpUtils::_getDefaultErrorPage(int status_code) {
 	return "<html><body><h1>" + status_code_ss.str() + " " + HttpUtils::getHttpStatusMessage(status_code) + "</h1></body></html>";
 }
 
-void HttpUtils::getErrorPage(HttpResponse &response, const Location& location, int status_code) {
+void HttpUtils::getErrorPage(HttpResponse &response, const Location* location, int status_code) {
 	// TEMP
+	if (!location) {
+		response.setBody("text/html", _getDefaultErrorPage(status_code));
+		return;
+	}
 	response.setStatusCode(status_code);
-	const map<int, string> errors = location.getErrors();
-	string root = location.getRoot();
+	const map<int, string> errors = location->getErrors();
+	string root = location->getRoot();
 	if (errors.find(status_code) != errors.end()) {
 		// Attention code dégeu ahead
 		cout << "Custom error page found for status code " << status_code << ": " << errors.at(status_code) << endl;
@@ -133,7 +137,7 @@ void HttpUtils::getAutoIndexPage(HttpResponse &response, const Location& locatio
 	DIR* dir = opendir(path.c_str());
 	if (!dir) {
 		std::cout << "Could not open directory: " << path << std::endl;
-		HttpUtils::getErrorPage(response, location, HTTP_CODE_FORBIDDEN);
+		HttpUtils::getErrorPage(response, &location, HTTP_CODE_FORBIDDEN);
 		return;
 	}
 
