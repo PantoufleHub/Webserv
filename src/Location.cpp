@@ -6,8 +6,8 @@
 Location::Location() : ABlockDirective() {}
 Location::~Location() {}
 
-const std::map<std::string, std::vector<std::string> >& Location::getCgi() const {
-	return _cgi_directives;
+const std::string& Location::getCgi() const {
+	return _cgi_pass;
 }
 
 void Location::inheritFromParent(const VirtualServer& parent) {
@@ -26,14 +26,8 @@ void Location::inheritFromParent(const VirtualServer& parent) {
 }
 
 void Location::setCgi(std::vector<std::string>::iterator& it) {
-	--it;
-	std::string key = *it;
+	_cgi_pass = *it;
 	++it;
-	std::vector<std::string> value;
-	for (; *it != ";"; ++it) {
-		value.push_back(*it);
-	}
-	_cgi_directives.insert(std::make_pair(key, value));
 }
 
 bool Location::checkMethod(const std::string& method) const {

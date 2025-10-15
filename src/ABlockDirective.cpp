@@ -37,7 +37,7 @@ const std::vector<int>& ABlockDirective::getPorts() const {
 const std::string& ABlockDirective::getRoot() const {
 	return _root;
 }
-const std::string& ABlockDirective::getClientMaxBodySize() const {
+const size_t& ABlockDirective::getClientMaxBodySize() const {
 	return _client_max_body_size;
 }
 const std::string& ABlockDirective::getUploadStore() const {
@@ -73,6 +73,8 @@ void ABlockDirective::setBlockDirective(std::vector<std::string>::iterator& it) 
 		}
 		++it;
 		SetDirectives(dirIt->second, it, *this);
+		if (!this->getClientMaxBodySize())
+			this->setClientMaxBodySize();
 	}
 }
 
@@ -163,8 +165,19 @@ void ABlockDirective::setErrors(std::vector<std::string>::iterator& it) {
 }
 
 void ABlockDirective::setClientMaxBodySize(std::vector<std::string>::iterator& it) {
-	_client_max_body_size = *it;
+	char*	cerror;
+	size_t maxBodySize = std::strtol(it->c_str(), &cerror, 10);
+	string	error = cerror;
+	if (!maxBodySize || !error.empty()) {
+		const std::string error = "Client max body size must be an integer (size_t) value '" + *it + "' Too large or bad format";
+		throw ConfigParser::ParsingException(error.c_str());
+	}
 	++it;
+}
+
+void ABlockDirective::setClientMaxBodySize() {
+	_client_max_body_size = MAX_REQUEST_LENGTH;
+	cout << "Missing Content length directive, setting the Max body size to the 1Mo default value" << endl;
 }
 
 void ABlockDirective::setUploadStore(std::vector<std::string>::iterator& it) {

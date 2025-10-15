@@ -17,7 +17,6 @@ const std::map<std::string, int>& getDirectivesMap() {
 		directives["index"] = index_config;
 		directives["error"] = error_config;
 		directives["allow_method"] = allow_method_config;
-		directives["cgi_index"] = cgi_index;
 		directives["client_max_body_size"] = client_max_body_size;
 	}
 	return directives;
