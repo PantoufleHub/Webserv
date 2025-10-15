@@ -64,8 +64,7 @@ void CgiHandler::_parseInfo() {
 	string script_name = request_path.substr(0, question_mark_pos);
 	string query_string = request_path.substr(question_mark_pos + 1);
 
-	const map<string, vector<string> > caca = _client_location.getCgi();
-	string pass = caca.at("cgi_pass")[0];
+	string pass = _client_location.getCgi();
 	pass = StringUtils::trimSlashes(pass, false, true);
 
 	size_t last_slash_pos = script_name.rfind("/"); 

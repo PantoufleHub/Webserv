@@ -467,17 +467,10 @@ void ClientHandler::_process() {
 
 	// script second
 	// Not using cgi_index for now
-	const map<string, vector<string> > cgistuff = _parsed_info.matching_location->getCgi();
+	string cgistuff = _parsed_info.matching_location->getCgi();
 	if (!cgistuff.empty()) {
-		if (cgistuff.find("cgi_pass") != cgistuff.end()) {
-			cout << "Found cgi_pass, changing to cgi state" << endl;
-			_changeState(CLIENT_CGIING);
-			return;
-		} else {
-			cout << "No cgi_pass! Error mode activated" << endl;
-			_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
-			return;
-		}
+		cout << "Found cgi_pass, changing to cgi state" << endl;
+		_changeState(CLIENT_CGIING);
 		return;
 	}
 
