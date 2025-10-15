@@ -60,8 +60,9 @@ CgiHandler::CgiHandler(	const HttpResponse	&response,
 		char* const argv[] = { const_cast<char*>(full_path.c_str()), NULL };
 		cout << "Execveing path: " << full_path << endl;
 		// WTF? memoryysdfa f;slakdjfakjfhlkdjfhadkjfhaassdlkjhljasahsdflkjasdhflkassjdfhas
-		sleep(5); // just here to test async/multiple clients
+		sleep(0); // just here to test async/multiple clients
 		execve(full_path.c_str(), argv, environ);
+		cout << "Execve failed" << endl;
 		exit(EXIT_FAILURE);
 	} else {
 
