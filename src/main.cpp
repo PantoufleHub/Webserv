@@ -21,7 +21,6 @@ int main(int argc, char** argv) {
 		WebServer Server(configPath);
 		// Server.display();
 		Server.run();
-		cout << "\n\n\nOUTTUTUTOITUOTUOTUI\n\n\n" << endl;
 	} catch (const std::exception& e) {
 		std::cout << e.what() << std::endl;
 		return 1;

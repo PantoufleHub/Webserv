@@ -34,11 +34,15 @@ string HttpUtils::_getDefaultErrorPage(int status_code) {
 	return "<html><body><h1>" + status_code_ss.str() + " " + HttpUtils::getHttpStatusMessage(status_code) + "</h1></body></html>";
 }
 
-void HttpUtils::getErrorPage(HttpResponse &response, const Location& location, int status_code) {
+void HttpUtils::getErrorPage(HttpResponse &response, const Location* location, int status_code) {
 	// TEMP
+	if (!location) {
+		response.setBody("text/html", _getDefaultErrorPage(status_code));
+		return;
+	}
 	response.setStatusCode(status_code);
-	const map<int, string> errors = location.getErrors();
-	string root = location.getRoot();
+	const map<int, string> errors = location->getErrors();
+	string root = location->getRoot();
 	if (errors.find(status_code) != errors.end()) {
 		// Attention code dégeu ahead
 		cout << "Custom error page found for status code " << status_code << ": " << errors.at(status_code) << endl;
@@ -133,7 +137,7 @@ void HttpUtils::getAutoIndexPage(HttpResponse &response, const Location& locatio
 	DIR* dir = opendir(path.c_str());
 	if (!dir) {
 		std::cout << "Could not open directory: " << path << std::endl;
-		HttpUtils::getErrorPage(response, location, HTTP_CODE_FORBIDDEN);
+		HttpUtils::getErrorPage(response, &location, HTTP_CODE_FORBIDDEN);
 		return;
 	}
 
@@ -166,17 +170,26 @@ void HttpUtils::getAutoIndexPage(HttpResponse &response, const Location& locatio
 /// @return The retrieved chunked from the body in string format
 string HttpUtils::unchunkString(const string &body, size_t &pos) {
 	if (pos >= body.size()) {
-		cout << "Reached end of body" << endl;
 		return "";
 	}
 
 	size_t find_crlf = body.find("\r\n", pos);
 	if (find_crlf == string::npos) {
-		cout << "No CRLF found\n";
 		return "";
 	}
 
 	string hex_size = body.substr(pos, find_crlf - pos);
+	size_t semicolon = hex_size.find(';');
+	if (semicolon != string::npos) {
+		hex_size = hex_size.substr(0, semicolon);
+	}
+
+	size_t first = hex_size.find_first_not_of(" \t");
+	size_t last = hex_size.find_last_not_of(" \t");
+	if (first != string::npos && last != string::npos) {
+		hex_size = hex_size.substr(first, last - first + 1);
+	}
+
 	if (!StringUtils::is_hex_string(hex_size)) {
 		cout << "Not a hex string: " << hex_size << "\n";
 		return "";
@@ -184,15 +197,24 @@ string HttpUtils::unchunkString(const string &body, size_t &pos) {
 
 	size_t chunk_size = strtol(hex_size.c_str(), NULL, 16);
 	if (chunk_size == 0) {
-		if (body.substr(find_crlf + 2, 2) != "\r\n") {
-			cout << "No final CRLF after 0 chunk\n";
-			return "";
+		if (body.size() >= find_crlf + 4 && 
+			body.substr(find_crlf + 2, 2) == "\r\n") {
+			pos = body.size();
 		}
+		return "";
 	}
 
-	string chunk = body.substr(find_crlf + 2, chunk_size);
-	pos = find_crlf + 2 + chunk_size + 2;
-	cout << "Unchunked " << chunk.size() << " bytes" << endl;
+	size_t chunk_start = find_crlf + 2;
+	size_t chunk_end = chunk_start + chunk_size;
+
+	if (chunk_end + 2 > body.size()) {
+		cout << "Incomplete chunk\n";
+		return "";
+	}
+
+	string chunk = body.substr(chunk_start, chunk_size);
+	pos = chunk_end + 2;
+
 	return chunk;
 }
 

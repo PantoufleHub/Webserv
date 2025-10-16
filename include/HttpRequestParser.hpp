@@ -6,6 +6,7 @@
 #include <cstdlib>
 
 #include "HttpRequest.hpp"
+#include "HttpUtils.hpp"
 #include "Constants.hpp"
 
 class HttpRequestParser {

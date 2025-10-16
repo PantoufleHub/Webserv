@@ -33,7 +33,7 @@ class HttpUtils {
 	static string makeResponse(int status_code);
 	static string makeResponse(int status_code, string content_type, string content);
 	static const string getHttpStatusMessage(int status_code);
-	static void getErrorPage(HttpResponse &response, const Location& location, int status_code);
+	static void getErrorPage(HttpResponse &response, const Location *location, int status_code);
 	static void getAutoIndexPage(HttpResponse &response, const Location& location, const string& path);
 	static size_t chunkFile(int fd, size_t chunk_size, string &return_chunk);
 	static string unchunkString(const string &body, size_t &pos);
