@@ -104,6 +104,8 @@ const string HttpUtils::getHttpStatusMessage(int status_code) {
 			return "Internal Server Error";
 		case 501:
 			return "Not Implemented";
+		case 502:
+			return "Bad Gateway";
 		case 503:
 			return "Service Unavailable";
 		case 505:
