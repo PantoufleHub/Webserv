@@ -26,6 +26,12 @@ CgiHandler::CgiHandler(	const HttpResponse	&response,
 						_client_socket(client_socket) {
 	_init_();
 
+	if (_request.getMethod() != METHOD_GET) {
+		cout << "Unimplemented CGI method" << endl;
+		_changeState(CGI_ERROR, HTTP_CODE_NOT_IMPLEMENTED);
+		return;
+	}
+
 	_parseInfo();
 	if (_error_code != 0) {
 		cout << "CGI parsing error" << endl;

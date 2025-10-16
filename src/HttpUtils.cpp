@@ -100,12 +100,15 @@ const string HttpUtils::getHttpStatusMessage(int status_code) {
 			return "Unsupported Media Type";
 		case 429:
 			return "Too Many Requests";
+		case 500:
+			return "Internal Server Error";
+		case 501:
+			return "Not Implemented";
 		case 503:
 			return "Service Unavailable";
 		case 505:
 			return "Http Version Not Supported";
-		case 500:
-			return "Internal Server Error";
+
 		default:
 			return "Internal Server Error";
 	}
