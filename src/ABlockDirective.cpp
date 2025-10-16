@@ -4,6 +4,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <sys/stat.h>
+
 #include "ConfigParser.hpp"
 #include "Constants.hpp"
 #include "DirectiveKeys.hpp"
@@ -181,13 +183,18 @@ void ABlockDirective::setClientMaxBodySize() {
 }
 
 void ABlockDirective::setUploadStore(std::vector<std::string>::iterator& it) {
-	std::ifstream dir(it->c_str());
-	if (dir.good()) {
+	struct stat info;
+
+	if (stat(it->c_str(), &info) == 0 && S_ISDIR(info.st_mode)) {
 		_upload_store = *it;
 	} else {
-		const std::string error = "Wrong path for Upload Store: " + *it;
-		Logger::logError(error + " | Falling back to default upload store");
-		_upload_store = DEFAULT_UPLOAD_STORE;
+		string mkdir_cmd = "mkdir -p " + *it;
+		if (system(mkdir_cmd.c_str()) == 0) {
+			_upload_store = *it;
+		} else {
+			Logger::logError("Failed to create upload store: " + *it + " | Using default");
+			_upload_store = DEFAULT_UPLOAD_STORE;
+		}
 	}
 	++it;
 }
