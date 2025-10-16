@@ -262,7 +262,8 @@ void CgiHandler::update() {
 			if (WIFEXITED(_child_status)) {
             	printf("Child exited, status = %d\n", WEXITSTATUS(_child_status));
 				if (WEXITSTATUS(_child_status) != 0) {
-					_changeState(CGI_ERROR, HTTP_CODE)
+					_changeState(CGI_ERROR, HTTP_CODE_BAD_GATEWAY);
+					return;
 				}
             } else if (WIFSIGNALED(_child_status)) {
                 printf("Child killed by signal %d\n", WTERMSIG(_child_status));
