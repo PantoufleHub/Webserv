@@ -10,9 +10,33 @@ void CgiHandler::_init_() {
 	_error_code = 0;
 	_created_child = false;
 	_child_pid = -1;
+	_pipe_input[0] = -1;
+	_pipe_input[1] = -1;
+	_pipe_output[0] = -1;
+	_pipe_output[1] = -1;
 }
 
-CgiHandler::CgiHandler(	const HttpResponse	&response,
+CgiHandler::~CgiHandler() {
+	// Not sure yet pipes?
+	if (_pipe_input[0] != -1) {
+		cout << "Closing _pipe_input[0]" << endl;
+		_closePipeInput(0);
+	}
+	if (_pipe_input[1] != -1) {
+		cout << "Closing _pipe_input[1]" << endl;
+		_closePipeInput(1);
+	}
+	if (_pipe_output[0] != -1) {
+		cout << "Closing _pipe_output[0]" << endl;
+		_closePipeOutput(0);
+	}
+	if (_pipe_output[1] != -1) {
+		cout << "Closing _pipe_output[1]" << endl;
+		_closePipeOutput(1);
+	}
+}
+
+CgiHandler::CgiHandler(	HttpResponse		&response,
 						const HttpRequest	&request,
 						const WebServer		&server,
 						const VirtualServer	&client_server,
@@ -26,24 +50,35 @@ CgiHandler::CgiHandler(	const HttpResponse	&response,
 						_client_socket(client_socket) {
 	_init_();
 
-	if (_request.getMethod() != METHOD_GET) {
+	if (_request.getMethod() != METHOD_GET && _request.getMethod() != METHOD_POST) {
 		cout << "Unimplemented CGI method" << endl;
 		_changeState(CGI_ERROR, HTTP_CODE_NOT_IMPLEMENTED);
 		return;
 	}
 
 	_parseInfo();
+	// Not useful yet but here in case
 	if (_error_code != 0) {
 		cout << "CGI parsing error" << endl;
 		_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
 		return;
 	}
 
-	if (pipe(_pipe) == -1) {
+	if (pipe(_pipe_input) == -1 || pipe(_pipe_output) == -1) {
 		cout << "Pipe error" << endl;
 		_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
 		return;
 	}
+}
+
+void	CgiHandler::_closePipeInput(int pipe_side) {
+	close(_pipe_input[pipe_side]);
+	_pipe_input[pipe_side] = -1;
+}
+
+void	CgiHandler::_closePipeOutput(int pipe_side) {
+	close(_pipe_output[pipe_side]);
+	_pipe_output[pipe_side] = -1;
 }
 
 void CgiHandler::_changeState(CgiState state, int error_code = 0) {
@@ -146,25 +181,58 @@ void CgiHandler::_createChildProcess() {
 		setenv("SERVER_PROTOCOL", _cgi_environment.env_server_protocol.c_str(), 1);
 		setenv("SERVER_SOFTWARE", _cgi_environment.env_server_software.c_str(), 1);
 
+  		_closePipeInput(WRITE);
+  		_closePipeOutput(READ);
+
+  		if (dup2(_pipe_input[READ], STDIN_FILENO) == -1
+			|| dup2(_pipe_output[WRITE], STDOUT_FILENO) == -1) {
+			cout << "Dup failed" << endl;
+			exit(EXIT_FAILURE);
+		}   
+
+  		_closePipeInput(READ);
+		_closePipeOutput(WRITE);
+		
+		sleep(0); // just here to test async/multiple clients
+		
 		char* const argv[] = { const_cast<char*>(full_path.c_str()), NULL };
-
-		close(_pipe[0]);
-		close(_pipe[1]);
-
-		sleep(3); // just here to test async/multiple clients
-
-		cout << "Execveing path: " << full_path << endl;
+		// cout << "Execveing path: " << full_path << endl;
 		execve(full_path.c_str(), argv, environ);
 
-		cout << "Execve failed, calling webserv destructor" << endl;
+		// cout << "Execve failed, calling webserv destructor" << endl;
 		_server.~WebServer();
-		cout << "Finished calling webserv destructor" << endl;
+		// cout << "Finished calling webserv destructor" << endl;
 		// delete this;
 
 		exit(EXIT_FAILURE);
 	} else {
-		close(_pipe[0]);
-		close(_pipe[1]);
+   		_closePipeInput(READ);
+   		_closePipeOutput(WRITE);
+
+   		if (!_request.getBody().empty()) {
+   		    ssize_t total_written = 0;
+   		    while (total_written < (ssize_t)_request.getBody().size()) {
+   		        ssize_t written = write(_pipe_input[WRITE], _request.getBody().c_str() + total_written, _request.getBody().size() - total_written);
+   		        if (written <= 0) {
+   		            cout << "write to CGI stdin failed" << endl;
+   		            break;
+   		        }
+   		        total_written += written;
+   		    }
+   		}
+   		_closePipeInput(WRITE);
+
+   		char buffer[DEFAULT_BUFFER_SIZE];
+   		ssize_t bytes_read;
+   		string cgi_output;
+
+   		while ((bytes_read = read(_pipe_output[READ], buffer, sizeof(buffer))) > 0) {
+   		    cgi_output.append(buffer, bytes_read);
+			_response.addBody(TYPE_HTML, string(buffer, bytes_read));
+   		}
+   		_closePipeOutput(READ);
+
+   		cout << "CGI Output:\n" << cgi_output << endl;
 	}
 }
 
@@ -191,6 +259,16 @@ void CgiHandler::update() {
 			cout << "Cgi finished" << endl;
 			// If bad status BAD_GATEWAY
 			// Should finish when response is ready
+			if (WIFEXITED(_child_status)) {
+            	printf("Child exited, status = %d\n", WEXITSTATUS(_child_status));
+
+            } else if (WIFSIGNALED(_child_status)) {
+                printf("Child killed by signal %d\n", WTERMSIG(_child_status));
+            } else if (WIFSTOPPED(_child_status)) {
+                printf("Child stopped by signal %d\n", WSTOPSIG(_child_status));
+            } else if (WIFCONTINUED(_child_status)) {
+                printf("Child continued\n");
+            }
 
 			_changeState(CGI_FINISHED);
 		}
