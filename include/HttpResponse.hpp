@@ -16,6 +16,8 @@ class HttpResponse : public AHttpMessage {
 	const int& getStatusCode() const;
 
 	void addBody(string content_type, string text);
+	void addBody(string text);
 	void setBody(string content_type, string body);
+	void setBody(string body);
 	void setStatusCode(int status_code);
 };

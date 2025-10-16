@@ -135,11 +135,8 @@ void WebServer::_openClientSocket(int listening_socket) {
 	cout << "Accepting client from socket " << listening_socket  << endl;
 	new_client_socket_fd = accept(listening_socket, (sockaddr*)&new_client_addr, &new_client_addr_len);
 	ASSERT(new_client_socket_fd != -1);
-	cout << "client connected: " << inet_ntoa(new_client_addr.sin_addr) << ":" << ntohs(new_client_addr.sin_port)
+	cout << "Client connected: " << inet_ntoa(new_client_addr.sin_addr) << ":" << ntohs(new_client_addr.sin_port)
 	     << endl;
-
-	// cout << "Client from entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd), true) << endl;
-	// cout << "Server entrypoint: " << WebUtils::getSocketEntryPoint(Socket(new_client_socket_fd)) << endl;
 
 	fcntl(new_client_socket_fd, fcntl(new_client_socket_fd, F_GETFL, 0) | O_NONBLOCK);
 

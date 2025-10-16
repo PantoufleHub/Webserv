@@ -88,6 +88,7 @@ class ClientHandler {
 	void _validateMatchingLocation();
 	void _parse();
 
+	void _getContentType();
 	void _getResourceDirectory();
 	void _getResource();
 	void _postResource();

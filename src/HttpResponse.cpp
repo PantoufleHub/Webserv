@@ -2,26 +2,29 @@
 
 HttpResponse::HttpResponse() : _status_code(200) {
 	this->_http_version = HTTP_VERSION;
-	// Since our server doesn't support persistent connections
 	this->addHeader(HEADER_CONNECTION, "close");
-	// this->addHeader(HEADER_CONTENT_LENGTH, "0");
 }
 
 HttpResponse::HttpResponse(int status_code) : _status_code(status_code) {
 	this->_http_version = HTTP_VERSION;
-	// Since our server doesn't support persistent connections
 	this->addHeader(HEADER_CONNECTION, "close");
-	// this->addHeader(HEADER_CONTENT_LENGTH, "0");
 }
 
 void HttpResponse::setBody(string content_type, string body) {
 	this->addHeader(HEADER_CONTENT_TYPE, content_type);
-	// this->addHeader(HEADER_CONTENT_LENGTH, StringUtils::sizetToString(body.length()));
+	AHttpMessage::setBody(body);
+}
+
+void HttpResponse::setBody(string body) {
 	AHttpMessage::setBody(body);
 }
 
 void HttpResponse::addBody(string content_type, string text) {
 	setBody(content_type, _body + text);
+}
+
+void HttpResponse::addBody(string text) {
+	setBody(_body + text);
 }
 
 string HttpResponse::_getStartLine() const {
