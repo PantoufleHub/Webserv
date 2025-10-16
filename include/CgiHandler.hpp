@@ -48,9 +48,10 @@ class CgiHandler{
 	CgiState				_state;
 	int						_child_pid;
 	int						_child_status;
-	int						_pipe[2];
+	int						_pipe_input[2];
+	int						_pipe_output[2];
 	int						_error_code;
-	const HttpResponse&		_response;
+	HttpResponse&			_response;
 	const HttpRequest&		_request;
 	const WebServer&		_server;
 	const VirtualServer&	_client_server;
@@ -58,6 +59,8 @@ class CgiHandler{
 	const Socket&			_client_socket;
 	CgiEnvironment			_cgi_environment;
 
+	void	_closePipeInput(int pipeSide);
+	void	_closePipeOutput(int pipeSide);
 	void	_parseInfo();
 	void	_changeState(CgiState state, int error_code);
 	void	_createChildProcess();
@@ -65,12 +68,13 @@ class CgiHandler{
    public:
 	void _init_();
 	
-	CgiHandler(	const HttpResponse&		response,
+	CgiHandler(	HttpResponse&			response,
 				const HttpRequest&		request,
 				const WebServer&		server,
 				const VirtualServer&	client_server,
 				const Location&			client_location,
 				const Socket&			client_socket);
+	~CgiHandler();
 
 	void update();
 
