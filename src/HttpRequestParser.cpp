@@ -73,8 +73,12 @@ bool HttpRequestParser::_parseHeaders(HttpRequest& request, istringstream& iss) 
 }
 
 bool HttpRequestParser::_parseBody(HttpRequest& request, istringstream& iss) {
-	string remaining;
-	getline(iss, remaining, '\0');
+	const string raw_request = iss.str();
+	std::streampos body_pos = iss.tellg();
+	if (body_pos == std::streampos(-1)) {
+		body_pos = static_cast<std::streampos>(raw_request.size());
+	}
+	string remaining = raw_request.substr(static_cast<size_t>(body_pos));
 
 	if (request.isHeaderSet("Transfer-Encoding") && 
 		StringUtils::insCompare(request.getHeaderValue("Transfer-Encoding"), "chunked")) {
