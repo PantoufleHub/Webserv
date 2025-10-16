@@ -17,6 +17,9 @@ using namespace std;
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
+#define READ 0
+#define WRITE 1
+
 #define ASSERT(condition)                                                                                          \
 	if (!(condition)) {                                                                                            \
 		cout << "Assertion failed: " << #condition << ", file " << __FILE__ << ", line " << __LINE__ << std::endl; \
