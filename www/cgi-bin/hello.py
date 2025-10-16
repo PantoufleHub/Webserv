@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import os
 import sys
+import time
+
+print("before")
+time.sleep(2)
+print("after")
 
 print("Content-Type: text/html")
 print()
@@ -19,12 +24,12 @@ print(f"<li>SERVER_NAME: {os.environ.get('SERVER_NAME', 'N/A')}</li>")
 print(f"<li>SERVER_PORT: {os.environ.get('SERVER_PORT', 'N/A')}</li>")
 print("</ul>")
 
-if os.environ.get('REQUEST_METHOD') == 'POST':
-    content_length = int(os.environ.get('CONTENT_LENGTH', 0))
-    if content_length > 0:
-        post_data = sys.stdin.read(content_length)
-        print(f"<h2>POST Data:</h2>")
-        print(f"<pre>{post_data}</pre>")
+# if os.environ.get('REQUEST_METHOD') == 'POST':
+#     content_length = int(os.environ.get('CONTENT_LENGTH', 0))
+#     if content_length > 0:
+#         post_data = sys.stdin.read(content_length)
+#         print(f"<h2>POST Data:</h2>")
+#         print(f"<pre>{post_data}</pre>")
 
 print("</body>")
 print("</html>")
