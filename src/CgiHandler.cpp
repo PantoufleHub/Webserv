@@ -102,7 +102,6 @@ void CgiHandler::_parseInfo() {
 
 void CgiHandler::_createChildProcess() {
 	string full_path = _cgi_environment.exec_path;
-	cout << "Creating child process for execution of path: " << full_path << endl;
 	struct stat sb;
 	if (access(full_path.c_str(), F_OK) != 0) {
 		cout << "File does not exist!" << endl;
@@ -120,9 +119,14 @@ void CgiHandler::_createChildProcess() {
 		_changeState(CGI_ERROR, HTTP_CODE_FORBIDDEN);
 		return;
 	}
-
+	
+	cout << "Creating child process for execution of path: " << full_path << endl;
 	_child_pid = fork();
-	if (_child_pid == 0) {
+	if (_child_pid == -1) {
+		cout << "Failed to fork process" << endl;
+		_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
+		return;
+	} else if (_child_pid == 0) {
 		extern char **environ;
 		setenv("AUTH_TYPE", _cgi_environment.env_auth_type.c_str(), 1);
 		setenv("CONTENT_LENGTH", _cgi_environment.env_content_length.c_str(), 1);
@@ -144,18 +148,19 @@ void CgiHandler::_createChildProcess() {
 
 		char* const argv[] = { const_cast<char*>(full_path.c_str()), NULL };
 
+		close(_pipe[0]);
+		close(_pipe[1]);
+
 		sleep(3); // just here to test async/multiple clients
 
 		cout << "Execveing path: " << full_path << endl;
-		close(_pipe[0]);
-		close(_pipe[1]);
 		execve(full_path.c_str(), argv, environ);
-		cout << "Execve failed" << endl;
 
+		cout << "Execve failed, calling webserv destructor" << endl;
 		_server.~WebServer();
 		cout << "Finished calling webserv destructor" << endl;
-
 		// delete this;
+
 		exit(EXIT_FAILURE);
 	} else {
 		close(_pipe[0]);
