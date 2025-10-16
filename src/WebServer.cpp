@@ -8,7 +8,6 @@ WebServer::WebServer(const string& config_file) {
 }
 
 WebServer::~WebServer() {
-	cout << "~WS destructor WITH " << _clients.size() << "CLIENTS" << endl;
 
 	for (map<int, ClientHandler*>::iterator client_it = _clients.begin();
 	     client_it != _clients.end(); ++client_it) {
@@ -41,8 +40,6 @@ WebServer::~WebServer() {
 	_listening_sockets.clear();
 
 	_pollfds.clear();
-
-	cout << "WS DESTRUCTOR DESTRUCTED HAHAHAHAHAHA" << endl;
 }
 
 void WebServer::addPollFd(pollfd pfd) {

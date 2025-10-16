@@ -73,10 +73,27 @@ bool HttpRequestParser::_parseHeaders(HttpRequest& request, istringstream& iss) 
 }
 
 bool HttpRequestParser::_parseBody(HttpRequest& request, istringstream& iss) {
-	string body;
-	getline(iss, body);
-	request.setBody(body);
-	return 1;
+	string remaining;
+	getline(iss, remaining, '\0');
+
+	if (request.isHeaderSet("Transfer-Encoding") && 
+		StringUtils::insCompare(request.getHeaderValue("Transfer-Encoding"), "chunked")) {
+		string unchunked_body;
+		size_t pos = 0;
+		string chunk;
+
+		while (!(chunk = HttpUtils::unchunkString(remaining, pos)).empty()) {
+			unchunked_body += chunk;
+		}
+		request.setBody(unchunked_body);
+		ostringstream content_length;
+		content_length << unchunked_body.size();
+		request.addHeader("Content-Length", content_length.str());
+		
+	} else {
+		request.setBody(remaining);
+	}
+	return true;
 }
 
 bool HttpRequestParser::_validateRequest(HttpRequest& ret) {
@@ -131,14 +148,78 @@ static int getContentLength(const string& dataIn) {
 	return -1;
 }
 
+static bool isChunkedEncoding(const string& dataIn) {
+	size_t pos = 0;
+	while ((pos = dataIn.find("Transfer-Encoding:", pos)) != string::npos ||
+			(pos = dataIn.find("transfer-encoding:", pos)) != string::npos) {
+		size_t line_end = dataIn.find("\r\n", pos);
+		if (line_end == string::npos) {
+			return false;
+		}
+		size_t value_start = dataIn.find(":", pos) + 1;
+		string value = dataIn.substr(value_start, line_end - value_start);
+		size_t first = value.find_first_not_of(" \t");
+		size_t last = value.find_last_not_of(" \t");
+		if (first != string::npos && last != string::npos) {
+			value = value.substr(first, last - first + 1);
+			if (value == "chunked") {
+				return true;
+			}
+		}
+		pos = line_end;
+	}
+	return false;
+}
+
+static int checkChunkedRequest(const string& dataIn, size_t headers_end) {
+	size_t pos = headers_end + 4;
+
+	while (pos < dataIn.size()) {
+		size_t chunk_size_end = dataIn.find("\r\n", pos);
+		if (chunk_size_end == string::npos) {
+			return 0;
+		}
+		string chunk_size_str = dataIn.substr(pos, chunk_size_end - pos);
+		size_t semicolon = chunk_size_str.find(';');
+		if (semicolon != string::npos) {
+			chunk_size_str = chunk_size_str.substr(0, semicolon);
+		}
+		if (!StringUtils::is_hex_string(chunk_size_str)) {
+			Logger::logError("Invalid chunk size: " + chunk_size_str);
+			return -1;
+		}
+		char* end_ptr;
+		long chunk_size = strtol(chunk_size_str.c_str(), &end_ptr, 16);
+		if (*end_ptr != '\0' || chunk_size < 0) {
+			Logger::logError("Failed to parse chunk size");
+			return -1;
+		}
+		if (chunk_size == 0) {
+			size_t final_crlf = chunk_size_end + 2;
+			if (final_crlf + 2 > dataIn.size()) {
+				return 0;
+			}
+			return static_cast<int>(final_crlf + 2);
+		}
+		size_t chunk_data_start = chunk_size_end + 2;
+		size_t chunk_data_end = chunk_data_start + chunk_size;
+		if (chunk_data_end + 2 > dataIn.size()) {
+			return 0;
+		}
+		if (dataIn[chunk_data_end] != '\r' || dataIn[chunk_data_end + 1] != '\n') {
+			Logger::logError("Missing CRLF after chunk data");
+			return -1;
+		}
+		pos = chunk_data_end + 2;
+	}
+	return 0;
+}
+
 int HttpRequestParser::checkDataIn(const string& _data_in) {
-	// bool	isChunked = false;
 	size_t request_end = _data_in.find("\r\n\r\n");
 	if (request_end == string::npos) {
 		return 0;
 	}
-	// else if (_data_in.find("transfer-encoding: chunked", _data_in.at(0), request_end))
-		// isChunked = true;
 
 	size_t first_line_end = _data_in.find("\r\n");
 	string first_line = _data_in.substr(0, first_line_end);
@@ -165,6 +246,9 @@ int HttpRequestParser::checkDataIn(const string& _data_in) {
 	}
 
 	if (method == "POST") {
+		if (isChunkedEncoding(_data_in)) {
+			return checkChunkedRequest(_data_in, request_end);
+		}
 		int content_length = getContentLength(_data_in);
 		if (content_length == -1) {
 			Logger::logError("POST without Content-Length, assuming no body");
