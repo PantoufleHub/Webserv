@@ -261,7 +261,9 @@ void CgiHandler::update() {
 			// Should finish when response is ready
 			if (WIFEXITED(_child_status)) {
             	printf("Child exited, status = %d\n", WEXITSTATUS(_child_status));
-
+				if (WEXITSTATUS(_child_status) != 0) {
+					_changeState(CGI_ERROR, HTTP_CODE)
+				}
             } else if (WIFSIGNALED(_child_status)) {
                 printf("Child killed by signal %d\n", WTERMSIG(_child_status));
             } else if (WIFSTOPPED(_child_status)) {
