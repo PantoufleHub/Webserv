@@ -387,56 +387,69 @@ void ClientHandler::_getResource() {
 
 void ClientHandler::_postResource() {
 	const string& body = _request->getBody();
-	
-	// NEEDS TO BE FIXED?
+
 	if (!_post_info.parsed) {
 		_post_info.parsed = true;
-		const string& root = _parsed_info.matching_server->getRoot();
-		const string& path = root.substr(0, root.size()-1) + _request->getPath();
-		cout << "Posting resource to path: " << path << " with content: " << _request->getBody() << endl;
-		string name = path; // Should not be the direct path! Do we care tho?
+		string uploadStore = _parsed_info.matching_location->getUploadStore();
 
+		if (uploadStore.empty()) 
+			uploadStore = DEFAULT_UPLOAD_STORE;
+
+		const string& request_path = _request->getPath();
+		size_t last_slash = request_path.rfind('/');
+		string filename;
+		if (last_slash != string::npos && last_slash + 1 < request_path.size()) {
+			filename = request_path.substr(last_slash + 1);
+		} else {
+			filename = "upload_" + StringUtils::sizetToString(time(NULL));
+		}
+
+		string full_path = uploadStore;
+		if (full_path[full_path.size() - 1] != '/') {
+			full_path += '/';
+		}
+		full_path += filename;
+
+		cout << "Uploading to: " << full_path << endl;
+
+		// Check if file exists
 		struct stat statbuf;
-		int stat_res = stat(name.c_str(), &statbuf);
-
-		if (stat_res == 0) {
-			cout << "File already exists" << endl;
+		if (stat(full_path.c_str(), &statbuf) == 0) {
 			_changeState(CLIENT_ERRORING, HTTP_CODE_CONFLICT);
 			return;
 		}
 
-		_post_info.fd = open(name.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
+		// Open file for writing
+		_post_info.fd = open(full_path.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
 		if (_post_info.fd < 0) {
-			cout << "Error opening fd" << endl; 
+			cout << "Error creating file: " << strerror(errno) << endl;
 			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 			return;
 		}
+
+		// Add to poll for writing
 		pollfd new_pfd;
 		new_pfd.events = POLLOUT;
 		new_pfd.fd = _post_info.fd;
 		_server->addPollFd(new_pfd);
 	} else {
+		// Write file data
 		pollfd &pfd = _server->getPollFd(_post_info.fd);
 		if (!WebUtils::canWrite(pfd)) {
-			cout << "Unable to  write to fd " << _post_info.fd << endl;
 			return;
 		}
+
 		static size_t pos = 0;
-		ssize_t bytes_read;
-	
-		bytes_read = HttpUtils::write_data(_post_info.fd, body, pos, _buffer_size);
-		if (bytes_read > 0) {
-			cout << "Wrote " << bytes_read << " to file " << _post_info.fd << endl;
-		}
-		else if (bytes_read == 0) {
-			cout << "Finished posting" << endl;
+		ssize_t bytes_written = HttpUtils::write_data(_post_info.fd, body, pos, _buffer_size);
+
+		if (bytes_written > 0) {
+			cout << "Wrote " << bytes_written << " bytes" << endl;
+		} else if (bytes_written == 0) {
+			cout << "Upload complete" << endl;
 			_changeState(CLIENT_RESPONDING, HTTP_CODE_CREATED);
-			return;
-		}
-		else if (bytes_read < 0) {
+		} else {
+			cout << "Write error" << endl;
 			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
-			cout << "Error writing to file" << endl;
-			return;
 		}
 	}
 }

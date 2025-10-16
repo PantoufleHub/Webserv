@@ -52,7 +52,7 @@ const size_t CONTENT_LENGTH_SIZE = 16;
 const size_t MAX_REQUEST_LENGTH = 1048576;
 
 // Config file constants
-static const std::string DEFAULT_UPLOAD_STORE = "/misc/var/uploads/";
+static const std::string DEFAULT_UPLOAD_STORE = "misc/var/uploads/";
 
 const std::map<std::string, int>& getDirectivesMap();
 
