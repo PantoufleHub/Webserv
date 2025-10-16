@@ -8,14 +8,38 @@ WebServer::WebServer(const string& config_file) {
 }
 
 WebServer::~WebServer() {
-	map<int, ClientHandler*>::iterator client_it = _clients.begin(); 
-	while (client_it != _clients.end()) {
-		ClientHandler *client = client_it->second;
+
+	for (map<int, ClientHandler*>::iterator client_it = _clients.begin();
+	     client_it != _clients.end(); ++client_it) {
+		const int client_fd = client_it->first;
+		ClientHandler* client = client_it->second;
+
+		if (client_fd >= 0) {
+			try {
+				removePollFd(client_fd);
+			} catch (const runtime_error&) {
+			}
+			close(client_fd);
+		}
+
 		if (client)
 			delete client;
-		_clients.erase(client_it);
-		client_it = _clients.begin();
 	}
+	_clients.clear();
+
+	for (size_t index = 0; index < _listening_sockets.size(); ++index) {
+		const int listening_fd = _listening_sockets[index].getFd();
+		if (listening_fd >= 0) {
+			try {
+				removePollFd(listening_fd);
+			} catch (const runtime_error&) {
+			}
+			close(listening_fd);
+		}
+	}
+	_listening_sockets.clear();
+
+	_pollfds.clear();
 }
 
 void WebServer::addPollFd(pollfd pfd) {
