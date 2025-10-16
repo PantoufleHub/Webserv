@@ -251,7 +251,6 @@ size_t HttpUtils::chunkString(const string &body, size_t &pos, size_t length, st
 	if (pos > body.size())
 		pos = body.size();
 
-	cout << "Chunked " << return_chunk.size() << " bytes" << endl;
 	return return_chunk.size();
 }
 
@@ -292,7 +291,6 @@ size_t HttpUtils::chunkFile(int fd, size_t chunk_size, string &return_chunk) {
 	strstr_chunk << hex << body_part.size() << "\r\n" << body_part << "\r\n";
 	return_chunk = strstr_chunk.str();
 
-	cout << "Chunked " << bytes_read << " bytes" << endl;
 	return bytes_read;
 }
 
@@ -312,7 +310,6 @@ ssize_t HttpUtils::write_data(const int fd, const string body, size_t &pos, size
 	bytes_read = write(fd, &body[pos], buffer_size);
 	pos += buffer_size;
 
-	cout << "Wrote " << bytes_read << " bytes to file" << endl;
 	return bytes_read;
 }
 

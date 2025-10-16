@@ -146,26 +146,25 @@ static void setNonBlocking(int fd) {
 
 void CgiHandler::_updateCgi() {
 	if (!_finished_sending) {
+		size_t bytes_left = _request.getBody().size() - _bytes_sent;
+		size_t to_write = (bytes_left < DEFAULT_BUFFER_SIZE) ? bytes_left : DEFAULT_BUFFER_SIZE;
 
 		ssize_t bytes_written = write(_pipe_input[WRITE],
 								_request.getBody().c_str() + _bytes_sent,
-								DEFAULT_BUFFER_SIZE);
+								to_write);
 		if (bytes_written < 0) {
 			cout << "write to CGI stdin failed" << endl;
 			_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
 			return;
-		} else if (bytes_written == 0) {
-			cout << "Finished sending to cgi" << endl;
-			_closePipeInput(WRITE);
-			_finished_sending = true;
 		} else {
-			cout << "Wrote " << bytes_written << " to cgi" << endl;
 			_bytes_sent += bytes_written;
 			if ((size_t)_bytes_sent >= _request.getBody().size()) {
 				cout << "Finished sending to cgi" << endl;
 				_closePipeInput(WRITE);
 				_finished_sending = true;
+				return;
 			}
+			return;
 		}
 	}
 
@@ -186,11 +185,11 @@ void CgiHandler::_updateCgi() {
 			cout << "Finished reading from cgi" << endl;
 			_closePipeOutput(READ);
 			_finished_reading = true;
-			cout << "CGI Output:\n" << _cgi_output << endl;
+			return;
 		} else {
 			_cgi_output.append(buffer, bytes_read);
 			_response.addBody(TYPE_HTML, string(buffer, bytes_read));
-			cout << "Read " << bytes_read << " from cgi" << endl;
+			return;
 		}
 	}
 }

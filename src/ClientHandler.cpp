@@ -30,10 +30,6 @@ void ClientHandler::_init_() {
 ClientHandler::ClientHandler() {}
 
 ClientHandler::ClientHandler(Socket socket, WebServer* server) : _socket(socket), _server(server) {
-	cout	<< "New CH for fd: " << _socket.getFd() << "\n"
-			<< " Server EP: " << WebUtils::getSocketEntryPoint(_socket) << "\n"
-			<< " Client EP: " << WebUtils::getSocketEntryPoint(_socket, true) << "\n"
-			<< endl;
 	_init_();
 }
 
@@ -153,7 +149,6 @@ void ClientHandler::_read() {
 	} else {
 		buffer[bytes_received] = '\0';
 		string data_read(buffer, bytes_received);
-		cout << "Received " << bytes_received << " bytes from client " << fd << endl;
 		_request_buffer += data_read;
 		if (_request_buffer.size() > MAX_REQUEST_LENGTH)
 			_changeState(CLIENT_ERRORING, HTTP_CODE_PAYLOAD_TOO_LARGE);
@@ -442,12 +437,10 @@ void ClientHandler::_postResource() {
 		static size_t pos = 0;
 		ssize_t bytes_written = HttpUtils::write_data(_post_info.fd, body, pos, _buffer_size);
 
-		if (bytes_written > 0) {
-			cout << "Wrote " << bytes_written << " bytes" << endl;
-		} else if (bytes_written == 0) {
+		if (bytes_written == 0) {
 			cout << "Upload complete" << endl;
 			_changeState(CLIENT_RESPONDING, HTTP_CODE_CREATED);
-		} else {
+		} else if (bytes_written < 0){
 			cout << "Write error" << endl;
 			_changeState(CLIENT_ERRORING, HTTP_CODE_INTERNAL_SERVER_ERROR);
 		}
@@ -580,8 +573,6 @@ void ClientHandler::_respond() {
 	if (!_response_info.sent_headers) {
 		chunk_to_send = _response.getHeadersString();
 		_response_info.sent_headers = true;
-		cout << "Sending headers to client on socket " << fd << endl;
-		cout << chunk_to_send << endl;
 		bytes_sent = send(fd, chunk_to_send.c_str(), chunk_to_send.size(), 0);
 		if (bytes_sent < 0) {
 			cout << "Error sending headers to client on socket " << fd << endl;
