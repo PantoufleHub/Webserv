@@ -50,6 +50,10 @@ class CgiHandler{
 	int						_child_status;
 	int						_pipe_input[2];
 	int						_pipe_output[2];
+	ssize_t					_bytes_sent;
+	bool					_finished_sending;
+	bool					_finished_reading;
+	string					_cgi_output;
 	int						_error_code;
 	HttpResponse&			_response;
 	const HttpRequest&		_request;
@@ -62,6 +66,8 @@ class CgiHandler{
 	void	_closePipeInput(int pipeSide);
 	void	_closePipeOutput(int pipeSide);
 	void	_parseInfo();
+	void	_updateCgi();
+	void	_parseCgiResponse();
 	void	_changeState(CgiState state, int error_code);
 	void	_createChildProcess();
 

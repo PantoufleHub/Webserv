@@ -14,6 +14,9 @@ void CgiHandler::_init_() {
 	_pipe_input[1] = -1;
 	_pipe_output[0] = -1;
 	_pipe_output[1] = -1;
+	_bytes_sent = 0;
+	_finished_sending = false;
+	_finished_reading = false;
 }
 
 CgiHandler::~CgiHandler() {
@@ -135,6 +138,67 @@ void CgiHandler::_parseInfo() {
     _cgi_environment.env_server_software = SERVER_SOFTWARE;
 }
 
+static void setNonBlocking(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags != -1)
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
+
+void CgiHandler::_updateCgi() {
+	if (!_finished_sending) {
+
+		ssize_t bytes_written = write(_pipe_input[WRITE],
+								_request.getBody().c_str() + _bytes_sent,
+								DEFAULT_BUFFER_SIZE);
+		if (bytes_written < 0) {
+			cout << "write to CGI stdin failed" << endl;
+			_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
+			return;
+		} else if (bytes_written == 0) {
+			cout << "Finished sending to cgi" << endl;
+			_closePipeInput(WRITE);
+			_finished_sending = true;
+		} else {
+			cout << "Wrote " << bytes_written << " to cgi" << endl;
+			_bytes_sent += bytes_written;
+			if ((size_t)_bytes_sent >= _request.getBody().size()) {
+				cout << "Finished sending to cgi" << endl;
+				_closePipeInput(WRITE);
+				_finished_sending = true;
+			}
+		}
+	}
+
+	if (!_finished_reading) {
+		char buffer[DEFAULT_BUFFER_SIZE];
+		ssize_t bytes_read;
+
+		bytes_read = read(_pipe_output[READ], buffer, sizeof(buffer));
+		if (bytes_read < 0) {
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				return;
+			} else {
+				cout << "Error reading from cgi" << endl;
+				_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
+				return;
+			}
+		} else if (bytes_read == 0) {
+			cout << "Finished reading from cgi" << endl;
+			_closePipeOutput(READ);
+			_finished_reading = true;
+			cout << "CGI Output:\n" << _cgi_output << endl;
+		} else {
+			_cgi_output.append(buffer, bytes_read);
+			_response.addBody(TYPE_HTML, string(buffer, bytes_read));
+			cout << "Read " << bytes_read << " from cgi" << endl;
+		}
+	}
+}
+
+void CgiHandler::_parseCgiResponse() {
+
+}
+
 void CgiHandler::_createChildProcess() {
 	string full_path = _cgi_environment.exec_path;
 	struct stat sb;
@@ -206,33 +270,14 @@ void CgiHandler::_createChildProcess() {
 
 		exit(EXIT_FAILURE);
 	} else {
-   		_closePipeInput(READ);
-   		_closePipeOutput(WRITE);
-
-   		if (!_request.getBody().empty()) {
-   		    ssize_t total_written = 0;
-   		    while (total_written < (ssize_t)_request.getBody().size()) {
-   		        ssize_t written = write(_pipe_input[WRITE], _request.getBody().c_str() + total_written, _request.getBody().size() - total_written);
-   		        if (written <= 0) {
-   		            cout << "write to CGI stdin failed" << endl;
-   		            break;
-   		        }
-   		        total_written += written;
-   		    }
-   		}
-   		_closePipeInput(WRITE);
-
-   		char buffer[DEFAULT_BUFFER_SIZE];
-   		ssize_t bytes_read;
-   		string cgi_output;
-
-   		while ((bytes_read = read(_pipe_output[READ], buffer, sizeof(buffer))) > 0) {
-   		    cgi_output.append(buffer, bytes_read);
-			_response.addBody(TYPE_HTML, string(buffer, bytes_read));
-   		}
-   		_closePipeOutput(READ);
-
-   		cout << "CGI Output:\n" << cgi_output << endl;
+		_closePipeInput(READ);
+		_closePipeOutput(WRITE);
+		setNonBlocking(_pipe_input[WRITE]);
+		setNonBlocking(_pipe_output[READ]);
+		if (_request.getBody().empty()) {
+			_closePipeInput(WRITE);
+			_finished_sending = true;
+		}
 	}
 }
 
@@ -254,7 +299,8 @@ void CgiHandler::update() {
 		if (result == 0) {
 			// parent behaviour (Will be parsing response i think)
 			// SENDING BODY ALSO? parse response when done
-
+			_updateCgi();
+			
 		} else if (result == _child_pid) {
 			cout << "Cgi finished" << endl;
 			// If bad status BAD_GATEWAY
