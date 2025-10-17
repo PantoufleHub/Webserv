@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <csignal>
 
 void CgiHandler::_init_() {
 	_state = CGI_PROCESSING;
@@ -18,6 +19,7 @@ void CgiHandler::_init_() {
 	_finished_sending = false;
 	_finished_reading = false;
 	_cgi_body_current = 0;
+	_cgi_start_time = 0;
 }
 
 CgiHandler::~CgiHandler() {
@@ -266,6 +268,7 @@ void CgiHandler::_createChildProcess() {
 	}
 	
 	cout << "Creating child process for execution of path: " << full_path << endl;
+	_cgi_start_time = time(NULL);
 	_child_pid = fork();
 	if (_child_pid == -1) {
 		cout << "Failed to fork process" << endl;
@@ -327,6 +330,24 @@ void CgiHandler::_createChildProcess() {
 	}
 }
 
+void	CgiHandler::_killCgiProcess() {
+	if (_child_pid > 0) {
+		cout << "Killing CGI process " << _child_pid << " due to timeout" << endl;
+		kill(_child_pid, SIGKILL);
+		waitpid(_child_pid, &_child_status, 0);
+		_child_pid = -1;
+	}
+}
+
+bool	CgiHandler::_isTimedOut() const {
+	if (_cgi_start_time == 0) {
+		return false;
+	}
+	time_t current_time = time(NULL);
+	time_t elapsed = current_time - _cgi_start_time;
+	return elapsed > TIMEOUT;
+}
+
 void CgiHandler::_writeResponseBody() {
 	_response.addBody(_cgi_output.substr(_cgi_body_current, DEFAULT_BUFFER_SIZE));
 	_cgi_body_current += DEFAULT_BUFFER_SIZE;
@@ -339,6 +360,11 @@ void CgiHandler::update() {
 
 	if (_state == CGI_ERROR) {
 		return;
+	}
+	if (_state == CGI_PROCESSING && _isTimedOut()){
+		cout << "CGI timeout exceeded" << endl;
+		_killCgiProcess();
+		_changeState(CGI_ERROR, HTTP_CODE_BAD_GATEWAY);
 	}
 	if (_state == CGI_PROCESSING) {
 		if (!_created_child) {
