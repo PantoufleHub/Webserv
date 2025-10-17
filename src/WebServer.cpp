@@ -154,19 +154,6 @@ void WebServer::_openClientSocket(int listening_socket) {
 void WebServer::_updateClientSockets() {
 	map<int, ClientHandler*>::iterator client_it;
 	for (client_it = _clients.begin(); client_it != _clients.end(); ++client_it) {
-		ClientHandler* client = client_it->second;
-		if (client->_isTimedOut()) {
-			int fd = client_it->first;
-			cout << "Client " << fd << " timed out" << endl;
-			HttpResponse timeout_response(HTTP_CODE_REQUEST_TIMEOUT);
-			timeout_response.setBody(TYPE_HTML, 
-				"<html><body><h1>408 Request Timeout</h1></body></html>");
-			string response_str = timeout_response.toString();
-			send(fd, response_str.c_str(), response_str.size(), 0);
-			Logger::logResponse(response_str, fd);
-			client->_changeState(CLIENT_DONE, HTTP_CODE_REQUEST_TIMEOUT);
-			continue;
-		}
 		client_it->second->update();
 	}
 }

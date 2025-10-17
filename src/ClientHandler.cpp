@@ -144,6 +144,12 @@ void ClientHandler::_checkRequestBuffer() {
 //MAX_B_S = max(vs[])
 void ClientHandler::_read() {
 	int fd = _socket.getFd();
+
+	if (_isTimedOut()) {
+		cout << "Client " << _socket.getFd() << " request timed out" << endl;
+		_changeState(CLIENT_RESPONDING, HTTP_CODE_REQUEST_TIMEOUT);
+	}
+	
 	pollfd &pfd = _server->getPollFd(fd);
 	if (!WebUtils::canRead(pfd))
 		return;
@@ -186,7 +192,7 @@ void ClientHandler::_validateFirstLine() {
 		return;
 	}
 
-	if (http_version != "HTTP/1.1") {
+	if (http_version != "HTTP/1.1" && http_version != "HTTP/1.0") {
 		_changeState(CLIENT_ERRORING, HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED);
 		return;
 	}
@@ -619,8 +625,6 @@ void ClientHandler::_respond() {
 
 	if (!WebUtils::canWrite(pfd))
 		return;
-
-	_updateLastActivity();
 
 	string chunk_to_send;
 	ssize_t chunk_size;
