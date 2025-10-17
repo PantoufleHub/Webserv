@@ -1,4 +1,9 @@
 #include "VirtualServer.hpp"
+#include "Logger.hpp"
+
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 VirtualServer::VirtualServer() : ABlockDirective() {}
 VirtualServer::~VirtualServer() {}
@@ -14,6 +19,18 @@ std::vector<Location>& VirtualServer::mutableLocations() {
 }
 
 void VirtualServer::setLocations(Location& location) {
+	const string& new_location_name = location.getNames()[0];
+
+	for (size_t i = 0; i < _locations.size(); i++) {
+		if (_locations[i].getNames()[0] == new_location_name) {
+			ostringstream warning;
+			warning << "Duplicate location block: " << new_location_name
+					<< " (previous definition will be overwritten)";
+			Logger::logError(warning.str());
+			_locations[i] = location;
+			return ;
+		}
+	}
 	_locations.push_back(location);
 }
 

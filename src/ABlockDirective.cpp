@@ -85,7 +85,15 @@ void ABlockDirective::addRootPrefixToErrors() {
 		if (!root.empty() && root[root.size() - 1] != '/' && !relativePath.empty() && relativePath[0] != '/') {
 			relativePath.insert(0, 1, '/');
 		}
+		string full_path = root + relativePath;
 		_errors[it->first] = root + relativePath;
+
+		struct stat info;
+		if (stat(full_path.c_str(), &info) != 0) {
+			ostringstream warning;
+			warning << "Warning: error page " << it->first << " does not exist: " << full_path;
+			Logger::logError(warning.str());
+		}
 	}
 }
 
@@ -159,7 +167,9 @@ void ABlockDirective::setErrors(std::vector<std::string>::iterator& it) {
 		if (!it->compare(";")) {
 			break;
 		}
-		_errors[code] = *it;
+		string error_page = *it;
+
+		_errors[code] = error_page;
 		++it;
 	}
 }
@@ -224,6 +234,15 @@ void ABlockDirective::setRedirect(std::vector<std::string>::iterator& it) {
 }
 
 void ABlockDirective::setRoot(std::vector<std::string>::iterator& it) {
+	string root_path = *it;
+
+	struct stat info;
+	if (stat(root_path.c_str(), &info) != 0) {
+		ostringstream warning;
+		warning << "Warning: root path does not exist: " << root_path;
+		Logger::logError(warning.str());
+	}
+
 	_root = *it;
 	++it;
 }

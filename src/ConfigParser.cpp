@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <arpa/inet.h>  // Add this include
 
 #include "ABlockDirective.hpp"
 #include "Constants.hpp"
@@ -11,18 +12,58 @@
 
 ConfigParser::ConfigParser(const std::string& filePath) : _filePath(filePath) {}
 
-void fillEntryPoint(std::vector<std::string>::iterator& it, EntryPoint& entryPoint, VirtualServer& block) {
-	for (; it->compare(";"); ++it) {
-		const std::size_t colonPos = it->find(':');
-		entryPoint.ip = it->substr(0, colonPos);
-		entryPoint.port = std::atoi(it->substr(colonPos + 1).c_str());
-		block.addEntryPoint(entryPoint);
+static bool isValidIP(const string& ip) {
+	if (ip == "0.0.0.0")
+		return true;
+	
+	struct sockaddr_in sa;
+	int result = inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr));
+
+	if (result == 1)
+		return true;
+	
+	if (ip == "localhost")
+		return true;
+	
+	return false;
+}
+
+static void checkConflictingEntryPoints(const vector<VirtualServer>& servers) {
+	map<string, vector<string> > ep_to_servers;
+	
+	for (size_t i = 0; i < servers.size(); i++) {
+		const VirtualServer& server = servers[i];
+		const vector<EntryPoint>& eps = server.getEntryPoints();
+		const vector<string>& names = server.getNames();
+
+		string current_server_name = names.empty() ? "(unnamed)" : names[0];
+
+		for (size_t j = 0; j < eps.size(); j++) {
+			ostringstream ep_key;
+			ep_key << eps[j].ip << ":" << eps[j].port;
+			string key = ep_key.str();
+
+			ep_to_servers[key].push_back(current_server_name);
+		}
+	}
+
+	for (map<string, vector<string> >::iterator it = ep_to_servers.begin();
+		it != ep_to_servers.end(); ++it) {
+		if (it->second.size() > 1) {
+			ostringstream warning;
+			warning << "Multiple servers listening on " << it->first << ": ";
+			for (size_t i = 0; i < it->second.size(); i++) {
+				warning << it->second[i];
+				if (i < it->second.size() - 1)
+					warning << ", ";
+			}
+			warning << " (this is OK if server_names differ)";
+			Logger::logError(warning.str());
+		}
 	}
 }
 
-namespace {
-
-bool isValidServer(VirtualServer& server) {
+static bool isValidServer(VirtualServer& server) {
 	if (server.getEntryPoints().empty()) {
 		Logger::logError("Server block missing listen directive");
 		return false;
@@ -47,7 +88,7 @@ bool isValidServer(VirtualServer& server) {
 	return true;
 }
 
-void validateAndPushBack(VirtualServer& candidate, std::vector<VirtualServer>& servers) {
+static void validateAndPushBack(VirtualServer& candidate, std::vector<VirtualServer>& servers) {
 	if (isValidServer(candidate)) {
 		servers.push_back(candidate);
 	} else {
@@ -55,7 +96,7 @@ void validateAndPushBack(VirtualServer& candidate, std::vector<VirtualServer>& s
 	}
 }
 
-std::vector<std::string> splitToken(std::string& token) {
+static std::vector<std::string> splitToken(std::string& token) {
 	std::vector<std::string> tokensplitted;
 	std::string buffer;
 
@@ -78,7 +119,38 @@ std::vector<std::string> splitToken(std::string& token) {
 	return tokensplitted;
 }
 
-}  // namespace
+void fillEntryPoint(std::vector<std::string>::iterator& it, EntryPoint& entryPoint, VirtualServer& block) {
+	for (; it->compare(";"); ++it) {
+		size_t colon_pos = it->find(':');
+		if (colon_pos == string::npos)
+			throw ConfigParser::ParsingException("Invalid listen format. Expected IP:PORT (e.g. 127.0.0.1:8080)");
+		
+		entryPoint.ip = it->substr(0, colon_pos);
+		string port_str = it->substr(colon_pos + 1);
+
+		if (!isValidIP(entryPoint.ip)) {
+			string error = "Invalid IP address: " + entryPoint.ip;
+			throw ConfigParser::ParsingException(error.c_str());
+		}
+		
+		char* end;
+		long port_long = strtol(port_str.c_str(), &end, 10);
+
+		if (*end != '\0') {
+			string error = "Port must be a number: " + port_str;
+			throw ConfigParser::ParsingException(error.c_str());
+		}
+
+		if (port_long < 1 || port_long > 65535) {
+			ostringstream error;
+			error << "Port number out of range (1-65535): " << port_long;
+			throw ConfigParser::ParsingException(error.str().c_str());
+		}
+
+		entryPoint.port = static_cast<int>(port_long);
+		block.addEntryPoint(entryPoint);
+	}
+}
 
 std::vector<VirtualServer> ConfigParser::parseTokens(std::vector<std::string> tokens) {
 	std::vector<VirtualServer> servers;
@@ -101,6 +173,8 @@ std::vector<VirtualServer> ConfigParser::parseTokens(std::vector<std::string> to
 	if (!error.empty()) {
 		throw ConfigParser::ParsingException(error.c_str());
 	}
+
+	checkConflictingEntryPoints(servers);
 
 	return servers;
 }
