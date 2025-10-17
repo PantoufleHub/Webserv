@@ -5,6 +5,8 @@ void ClientHandler::_init_() {
 	_buffer_size = DEFAULT_BUFFER_SIZE;
 	_request = NULL;
 
+	_last_activity = time(NULL);
+
 	// Response info init
 	_response_info.bytes_sent = 0;
 	_response_info.sent_headers = false;
@@ -58,6 +60,16 @@ ClientHandler::~ClientHandler() {
 	}
 }
 
+void	ClientHandler::_updateLastActivity() {
+	_last_activity = time(NULL);
+}
+
+bool	ClientHandler::_isTimedOut() const {
+	time_t current_time = time(NULL);
+	time_t elapsed = current_time - _last_activity;
+	return elapsed > TIMEOUT;
+}
+
 /// @brief Change the state of the ClientHandler
 /// @param newState The state to change to
 /// @param statusCode The response status code to change to (optional)
@@ -65,6 +77,7 @@ void ClientHandler::_changeState(ClientState newState, const int statusCode = 0)
 	_state = newState;
 	int fd = _socket.getFd();
 	pollfd &client_pfd = _server->getPollFd(fd);
+	_updateLastActivity();
 	if (statusCode)
 		_response.setStatusCode(statusCode);
 
@@ -127,6 +140,7 @@ void ClientHandler::_checkRequestBuffer() {
 		}
 	}
 }
+
 //MAX_B_S = max(vs[])
 void ClientHandler::_read() {
 	int fd = _socket.getFd();
@@ -146,6 +160,7 @@ void ClientHandler::_read() {
 		_changeState(CLIENT_DONE);
 		
 	} else {
+		_updateLastActivity();
 		buffer[bytes_received] = '\0';
 		string data_read(buffer, bytes_received);
 		_request_buffer += data_read;
@@ -565,6 +580,10 @@ void ClientHandler::_cgi() {
 		// return;
 	}
 
+	if (_cgi_info.cgi_handler->_isTimedOut()) {
+		cout << "CGI time out" << endl;
+		_changeState(CLIENT_ERRORING, HTTP_CODE_BAD_GATEWAY);
+	}
 	if (_cgi_info.cgi_handler->getState() == CGI_ERROR) {
 		_changeState(CLIENT_ERRORING, _cgi_info.cgi_handler->getErrorCode());
 		return;
@@ -581,8 +600,6 @@ void ClientHandler::_cgi() {
 		_changeState(CLIENT_RESPONDING);
 		return;
 	}
-
-
 }
 
 void ClientHandler::_error() {
@@ -602,6 +619,8 @@ void ClientHandler::_respond() {
 
 	if (!WebUtils::canWrite(pfd))
 		return;
+
+	_updateLastActivity();
 
 	string chunk_to_send;
 	ssize_t chunk_size;

@@ -71,38 +71,42 @@ class ClientHandler {
 	PostInfo		_post_info;
 	CgiInfo			_cgi_info;
 
+	time_t			_last_activity;
+
 	void _checkRequestBuffer();
-	void _changeState(ClientState newState, const int stateCode);
-   public:
+	public:
 	void _init_();
 	// For map
 	ClientHandler();
 	ClientHandler(Socket socket, WebServer* server);
 	~ClientHandler();
-
+	
 	void _read();
-
+	
 	void _validateFirstLine();
 	void _findVirtualServer();
 	void _findMatchingLocation();
 	void _validateMatchingLocation();
 	void _parse();
-
+	void _updateLastActivity();
+	bool _isTimedOut() const;
+	
 	void _getContentType();
 	void _getResourceDirectory();
 	void _getResource();
 	void _postResource();
 	void _deleteResource();
 	void _process();
-
+	
 	void _fillCgiInfoPacket();
 	void _cgi();
-
+	
 	void _error();
-
+	
 	void _respond();
-
+	
 	ClientState getState() const;
-
+	void _changeState(ClientState newState, const int stateCode);
+	
 	void update();
 };

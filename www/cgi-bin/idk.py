@@ -2,6 +2,9 @@
 import os
 import sys
 
+import time
+time.sleep(6)
+
 print("Content-Type: text/html")
 print()
 print("<html>")

@@ -11,6 +11,8 @@ using namespace std;
 #define DEFAULT_BUFFER_SIZE 10240
 #define POLL_TIMEOUT 0
 
+#define TIMEOUT 5
+
 #define PYTHON_EXTENSION ".py"
 #define SHELL_EXTENSION ".sh"
 
