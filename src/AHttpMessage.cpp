@@ -8,14 +8,6 @@ void AHttpMessage::addHeader(string header, string value) {
 
 void AHttpMessage::setBody(string body) {
 	this->_body = body;
-
-	// MAY NEED TO CHANGE WHEN IMPLEMENTING CHUNKED
-	// IDK HOW WE GONNA IMPLEMENT CHUNKED >:O
-	// std::ostringstream ss;
-	// ss << body.length();
-	// string length = ss.str();
-
-	// this->addHeader(HEADER_CONTENT_LENGTH, length);
 }
 
 void AHttpMessage::setHttpVersion(string http_version) {

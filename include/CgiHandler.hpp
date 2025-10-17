@@ -16,6 +16,8 @@ using namespace std;
 
 typedef enum CgiState {
 	CGI_PROCESSING,
+	CGI_PARSING,
+	CGI_WRITING,
 	CGI_FINISHED,
 	CGI_ERROR,
 } CgiState;
@@ -54,6 +56,9 @@ class CgiHandler{
 	bool					_finished_sending;
 	bool					_finished_reading;
 	string					_cgi_output;
+	size_t					_cgi_body_start;
+	size_t					_cgi_body_current;
+	vector<string>			_cgi_headers;
 	int						_error_code;
 	HttpResponse&			_response;
 	const HttpRequest&		_request;
@@ -63,13 +68,16 @@ class CgiHandler{
 	const Socket&			_client_socket;
 	CgiEnvironment			_cgi_environment;
 
-	void	_closePipeInput(int pipeSide);
-	void	_closePipeOutput(int pipeSide);
-	void	_parseInfo();
-	void	_updateCgi();
-	void	_parseCgiResponse();
-	void	_changeState(CgiState state, int error_code);
-	void	_createChildProcess();
+	void			_closePipeInput(int pipeSide);
+	void			_closePipeOutput(int pipeSide);
+	void			_parseInfo();
+	void			_updateCgi();
+	void			_getCgiHeaders();
+	void			_parseCgiHeaders();
+	void			_parseCgiResponse();
+	void			_writeResponseBody();
+	void			_changeState(CgiState state, int error_code);
+	void			_createChildProcess();
 
    public:
 	void _init_();

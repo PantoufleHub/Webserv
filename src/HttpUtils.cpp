@@ -37,7 +37,7 @@ string HttpUtils::_getDefaultErrorPage(int status_code) {
 void HttpUtils::getErrorPage(HttpResponse &response, const Location* location, int status_code) {
 	// TEMP
 	if (!location) {
-		response.setBody("text/html", _getDefaultErrorPage(status_code));
+		response.setBody(TYPE_HTML, _getDefaultErrorPage(status_code));
 		return;
 	}
 	response.setStatusCode(status_code);
@@ -47,8 +47,8 @@ void HttpUtils::getErrorPage(HttpResponse &response, const Location* location, i
 		// Attention code dégeu ahead
 		cout << "Custom error page found for status code " << status_code << ": " << errors.at(status_code) << endl;
 		string str_error_file = errors.at(status_code);
-		str_error_file = (str_error_file[0] != '/') ? "/" + str_error_file : str_error_file;
-		string str_full_path = (root + str_error_file);
+		// str_error_file = (str_error_file[0] != '/') ? "/" + str_error_file : str_error_file;
+		string str_full_path = StringUtils::pathConcatenateFlex(root, str_error_file, false, false);
 		const char* error_file = str_full_path.c_str();
 		cout << "Using custom error page: " << error_file << endl;
 		ifstream page(error_file);
@@ -56,13 +56,13 @@ void HttpUtils::getErrorPage(HttpResponse &response, const Location* location, i
 			ostringstream osstrpage;
 			osstrpage << page.rdbuf();
 			string content = osstrpage.str();
-			response.setBody("text/html", content);
+			response.setBody(TYPE_HTML, content);
 			return;
 		} else {
 			cout << "Error opening error page " << error_file << endl;
 		}
 	}
-	response.setBody("text/html", _getDefaultErrorPage(status_code));
+	response.setBody(TYPE_HTML, _getDefaultErrorPage(status_code));
 	return;
 }
 
@@ -136,9 +136,6 @@ string HttpUtils::_getAutoIndexEntry(const string& path, const string& entry, bo
 }
 
 void HttpUtils::getAutoIndexPage(HttpResponse &response, const Location& location, const string& path) {
-	// AUTOINDEX ADD LINKS!
-	// ret.setBody(TYPE_HTML, "This is a placeholder for an autoindex page.\nPath: " + path + "\n");
-
 	DIR* dir = opendir(path.c_str());
 	if (!dir) {
 		std::cout << "Could not open directory: " << path << std::endl;

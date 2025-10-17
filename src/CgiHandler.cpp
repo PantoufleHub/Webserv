@@ -17,6 +17,7 @@ void CgiHandler::_init_() {
 	_bytes_sent = 0;
 	_finished_sending = false;
 	_finished_reading = false;
+	_cgi_body_current = 0;
 }
 
 CgiHandler::~CgiHandler() {
@@ -98,6 +99,10 @@ void CgiHandler::_changeState(CgiState state, int error_code = 0) {
 		case CGI_PROCESSING:
 			break;
 		case CGI_FINISHED:
+			break;
+		case CGI_PARSING:
+			break;
+		case CGI_WRITING:
 			break;
 	}
 
@@ -188,14 +193,56 @@ void CgiHandler::_updateCgi() {
 			return;
 		} else {
 			_cgi_output.append(buffer, bytes_read);
-			_response.addBody(TYPE_HTML, string(buffer, bytes_read));
 			return;
 		}
 	}
 }
 
-void CgiHandler::_parseCgiResponse() {
+void CgiHandler::_parseCgiHeaders() {
+	for (size_t index = 0; index < _cgi_headers.size(); index++) {
+		string header = _cgi_headers[index];
+		string key;
+		string value;
+		size_t semi_col_pos = header.find(": ");
+		if (semi_col_pos == string::npos) {
+			cout << "Invalid header" << endl;
+			_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
+			return;
+		} 
+		key = header.substr(0, semi_col_pos);
+		value = header.substr(semi_col_pos + 2);
+		_response.addHeader(key, value);
+	}
+}
 
+void CgiHandler::_getCgiHeaders() {
+	size_t index = 0;
+	while (index < _cgi_output.size()) {
+		size_t line_end = _cgi_output.find("\n", index);
+		if (line_end == string::npos)
+			break;
+
+		string header = _cgi_output.substr(index, line_end - index);
+		if (header == "" || header == "\r") { // \n or \r\n
+			_cgi_body_start = line_end + 1;
+			_cgi_body_current = _cgi_body_start;
+			break;
+		}
+		_cgi_headers.push_back(header);
+		index = line_end + 1;
+	}
+}
+
+void CgiHandler::_parseCgiResponse() {
+	if (!_finished_reading || !_finished_sending) {
+		update();
+	} else {
+		_getCgiHeaders();
+		_parseCgiHeaders();
+		
+		if (_state == CGI_PARSING)
+			_changeState(CGI_WRITING);
+	}
 }
 
 void CgiHandler::_createChildProcess() {
@@ -280,6 +327,13 @@ void CgiHandler::_createChildProcess() {
 	}
 }
 
+void CgiHandler::_writeResponseBody() {
+	_response.addBody(_cgi_output.substr(_cgi_body_current, DEFAULT_BUFFER_SIZE));
+	_cgi_body_current += DEFAULT_BUFFER_SIZE;
+	if (_cgi_body_current >= (_cgi_output.size() - _cgi_body_start))
+		_changeState(CGI_FINISHED);
+}
+
 void CgiHandler::update() {
 	(void)_response;
 
@@ -296,14 +350,9 @@ void CgiHandler::update() {
 		int result;
 		result = waitpid(_child_pid, &_child_status, WNOHANG);
 		if (result == 0) {
-			// parent behaviour (Will be parsing response i think)
-			// SENDING BODY ALSO? parse response when done
 			_updateCgi();
-			
 		} else if (result == _child_pid) {
 			cout << "Cgi finished" << endl;
-			// If bad status BAD_GATEWAY
-			// Should finish when response is ready
 			if (WIFEXITED(_child_status)) {
             	printf("Child exited, status = %d\n", WEXITSTATUS(_child_status));
 				if (WEXITSTATUS(_child_status) != 0) {
@@ -318,8 +367,14 @@ void CgiHandler::update() {
                 printf("Child continued\n");
             }
 
-			_changeState(CGI_FINISHED);
+			_changeState(CGI_PARSING);
 		}
+	}
+	if (_state == CGI_PARSING) {
+		_parseCgiResponse();
+	}
+	if (_state == CGI_WRITING) {
+		_writeResponseBody();
 	}
 	
 }

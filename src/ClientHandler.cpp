@@ -9,7 +9,7 @@ void ClientHandler::_init_() {
 	_response_info.bytes_sent = 0;
 	_response_info.sent_headers = false;
 	_response_info.fd_to_send = -1;
-	_response_info.content_type = TYPE_HTML;
+	_response_info.content_type = "";
 
 	// Parsed info init
 	_parsed_info.virtual_servers = NULL;
@@ -83,14 +83,14 @@ void ClientHandler::_changeState(ClientState newState, const int statusCode = 0)
 			break;
 		case CLIENT_ERRORING:
 			client_pfd.events = 0;
-			// Reset response
-			_response.setBody(TYPE_HTML, "");
+			_response.setBody("");
 			break;
 		case CLIENT_RESPONDING:
 			cout	<< "Changing state to responding for client on socket " << fd << "\n"
 					<< "Fd to send: " << _response_info.fd_to_send << endl;
 			client_pfd.events = POLLOUT;
-			_response.addHeader(HEADER_CONTENT_TYPE, _response_info.content_type);
+			if (_response_info.content_type != "")
+				_response.addHeader(HEADER_CONTENT_TYPE, _response_info.content_type);
 	
 			if (_response_info.fd_to_send == -1) {
 				_response.addHeader(HEADER_CONTENT_LENGTH, StringUtils::sizetToString(_response.getBodySize()));
@@ -110,7 +110,6 @@ void ClientHandler::_changeState(ClientState newState, const int statusCode = 0)
 }
 
 void ClientHandler::_checkRequestBuffer() {
-	// CheckDataIn still needs to handle chunked transfer encoding
 	int request_length = HttpRequestParser::checkDataIn(_request_buffer);
 	if (request_length > 0) {
 		cout << "Full request received on socket " << _socket.getFd() << endl;
@@ -255,7 +254,6 @@ void ClientHandler::_validateMatchingLocation() {
 }
 
 void ClientHandler::_parse() {
-	// PARSE REQUEST
 	int fd = _socket.getFd();
 	cout << "Parsing request from client on socket " << fd << endl;
 	
@@ -343,6 +341,45 @@ void ClientHandler::_getResourceDirectory() {
 	_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
 }
 
+void ClientHandler::_getContentType() {
+	// PARDON j'ai commencé et jme suis emballé!!!!!!!!!
+	string path = _request->getPath();
+	if (path.size() > 5 && path.substr(path.size() - 5) == ".html")
+		_response_info.content_type = TYPE_HTML;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".txt")
+		_response_info.content_type = TYPE_PLAIN;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".png")
+		_response_info.content_type = TYPE_PNG;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".jpg")
+		_response_info.content_type = TYPE_JPG;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".gif")
+		_response_info.content_type = TYPE_GIF;
+	else if (path.size() > 5 && path.substr(path.size() - 5) == ".webp")
+		_response_info.content_type = TYPE_WEBP;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".svg")
+		_response_info.content_type = TYPE_SVG;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".bmp")
+		_response_info.content_type = TYPE_BMP;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".ico")
+		_response_info.content_type = TYPE_ICO;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".css")
+		_response_info.content_type = TYPE_CSS;
+	else if (path.size() > 3 && path.substr(path.size() - 3) == ".js")
+		_response_info.content_type = TYPE_JS;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".mp3")
+		_response_info.content_type = TYPE_MP3;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".ogg")
+		_response_info.content_type = TYPE_AOGG;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".wav")
+		_response_info.content_type = TYPE_WAV;
+	else if (path.size() > 5 && path.substr(path.size() - 5) == ".webm")
+		_response_info.content_type = TYPE_VWEBM;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".mp4")
+		_response_info.content_type = TYPE_MP4;
+	else if (path.size() > 4 && path.substr(path.size() - 4) == ".ogv")
+		_response_info.content_type = TYPE_VOGG;
+}
+
 void ClientHandler::_getResource() {
 	const string path = _parsed_info.full_path;
 	cout << "Getting resource for path: " << path << endl;
@@ -377,6 +414,7 @@ void ClientHandler::_getResource() {
 		return;
 	}
 	cout << "Opened fd: " << _response_info.fd_to_send << endl;
+	_getContentType();
 	_changeState(CLIENT_RESPONDING);
 }
 
@@ -457,15 +495,11 @@ void ClientHandler::_deleteResource() {
 		return;
 	}
 
-	// resend page TOoO ANNAOYING?
 	_changeState(CLIENT_RESPONDING, HTTP_CODE_NO_CONTENT);
 	return; // useless? yes but whatever, i grew attached to it
 }
 
 void ClientHandler::_process() {
-	// PROCESS GET/POST/DELETE
-	// int fd = _socket.getFd();
-	// pollfd& pfd = _server->getPollFd(fd);
 	const Location& matching_location = *_parsed_info.matching_location;
 
 	// redirection first
@@ -536,7 +570,9 @@ void ClientHandler::_cgi() {
 		return;
 	}
 
-	if (_cgi_info.cgi_handler->getState() == CGI_PROCESSING) {
+	if (_cgi_info.cgi_handler->getState() == CGI_PROCESSING
+		|| _cgi_info.cgi_handler->getState() == CGI_PARSING
+		|| _cgi_info.cgi_handler->getState() == CGI_WRITING) {
 		_cgi_info.cgi_handler->update();
 		return;
 	}

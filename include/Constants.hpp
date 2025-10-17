@@ -25,6 +25,20 @@ const string TYPE_HTML = "text/html";
 const string TYPE_PLAIN = "text/plain";
 const string TYPE_PNG = "image/png";
 const string TYPE_JPG = "image/jpg";
+const string TYPE_GIF = "image/gif";
+const string TYPE_WEBP = "image/webp";
+const string TYPE_SVG = "image/svg+xml";
+const string TYPE_BMP = "image/bmp";
+const string TYPE_ICO= "image/x-icon";
+const string TYPE_CSS = "text/CSS";
+const string TYPE_JS = "application/javascript";
+const string TYPE_MP3 = "audio/mpeg";
+const string TYPE_AOGG = "audio/ogg";
+const string TYPE_WAV = "audio/wav";
+const string TYPE_AWEBM = "audio/webm";
+const string TYPE_MP4 = "video/mp4";
+const string TYPE_VWEBM = "video/webm";
+const string TYPE_VOGG = "video/ogg";
 
 const string ENCODING_CHUNKED = "chunked";
 
