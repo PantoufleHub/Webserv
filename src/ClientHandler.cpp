@@ -510,6 +510,13 @@ void ClientHandler::_deleteResource() {
 	const string path = _parsed_info.full_path;
 	cout << "Deleting resource at path: " << path << endl;
 
+	struct stat file_stat;
+	if (stat(path.c_str(), &file_stat) != 0) {
+		cout << "File not found: " << path << endl;
+		_changeState(CLIENT_ERRORING, HTTP_CODE_NOT_FOUND);
+		return;
+	}
+
 	if (remove(path.c_str()) != 0) {
 		cout << "Error deleting file: " << path << endl;
 		_changeState(CLIENT_ERRORING, HTTP_CODE_FORBIDDEN);
