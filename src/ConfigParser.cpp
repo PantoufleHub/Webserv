@@ -53,12 +53,12 @@ static void checkConflictingEntryPoints(const vector<VirtualServer>& servers) {
 			ostringstream warning;
 			warning << "Multiple servers listening on " << it->first << ": ";
 			for (size_t i = 0; i < it->second.size(); i++) {
-				warning << it->second[i];
-				if (i < it->second.size() - 1)
-					warning << ", ";
+					warning << it->second[i];
+					if (i < it->second.size() - 1)
+						warning << ", ";
 			}
-			warning << " (this is OK if server_names differ)";
-			Logger::logError(warning.str());
+			warning << "\nUpdate your config file accordingly";
+			throw ConfigParser::ParsingException(warning.str().c_str());
 		}
 	}
 }
