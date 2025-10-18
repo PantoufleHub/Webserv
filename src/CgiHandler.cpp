@@ -345,7 +345,7 @@ bool	CgiHandler::_isTimedOut() const {
 	}
 	time_t current_time = time(NULL);
 	time_t elapsed = current_time - _cgi_start_time;
-	return elapsed > TIMEOUT;
+	return elapsed > CGI_TIMEOUT;
 }
 
 void CgiHandler::_writeResponseBody() {

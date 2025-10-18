@@ -67,7 +67,7 @@ void	ClientHandler::_updateLastActivity() {
 bool	ClientHandler::_isTimedOut() const {
 	time_t current_time = time(NULL);
 	time_t elapsed = current_time - _last_activity;
-	return elapsed > TIMEOUT;
+	return elapsed > CLIENT_TIMEOUT;
 }
 
 /// @brief Change the state of the ClientHandler

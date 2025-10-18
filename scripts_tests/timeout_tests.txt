@@ -1,0 +1,6 @@
+Client timeout one liner:
+(echo -e "GET / HTTP/1.1\r\nHost: localhost\r\n"; sleep 10) | nc localhost 8080
+
+CGI timeout with bash script:
+curl http://localhost:8080/cgi-bin/timeout.sh
+
