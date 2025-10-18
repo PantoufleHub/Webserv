@@ -181,13 +181,7 @@ void CgiHandler::_updateCgi() {
 
 		bytes_read = read(_pipe_output[READ], buffer, sizeof(buffer));
 		if (bytes_read < 0) {
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				return;
-			} else {
-				cout << "Error reading from cgi" << endl;
-				_changeState(CGI_ERROR, HTTP_CODE_INTERNAL_SERVER_ERROR);
-				return;
-			}
+			return;
 		} else if (bytes_read == 0) {
 			cout << "Finished reading from cgi" << endl;
 			_closePipeOutput(READ);
